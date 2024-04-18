@@ -1,0 +1,14 @@
+coloredlogs
+langchain
+langchain-community
+langchain-openai
+openai
+kathara
+pytest
+sortedcontainers
+networkx
+chromadb
+scikit-learn
+pdfminer.six
+tiktoken
+deepdiff
