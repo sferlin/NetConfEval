@@ -84,7 +84,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
 
     for model_name in model2plot.keys():
         results_files_list = glob.glob(
-            os.path.join("evaluation", results_path, f"result-{model_name}-{requirements_str}-*.csv")
+            os.path.join(".", results_path, f"result-{model_name}-{requirements_str}-*.csv")
         )
         if results_files_list:
             results_file = results_files_list.pop()
@@ -94,7 +94,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
 
             model2result[model_name]["accuracy"] = extract_result(results_file, model_name)
 
-    base_figures_path = os.path.join("evaluation", figures_path)
+    base_figures_path = os.path.join(".", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     # Accuracy

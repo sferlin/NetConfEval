@@ -13,7 +13,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from sortedcontainers import SortedSet
-from netconfeval.utils import strtobool
+from src.utils import strtobool
 
 model2plot = {
     "gpt-4-turbo": {
@@ -141,7 +141,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
     model_list = model2plot.keys()
     for model_name in model_list:
         results_files_list = glob.glob(
-            os.path.join("evaluation", results_path, f"result-{model_name}-{requirements_str}-conflict-*.csv"))
+            os.path.join(".", results_path, f"result-{model_name}-{requirements_str}-conflict-*.csv"))
 
         if len(results_files_list) == 0:
             continue
@@ -158,7 +158,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
         print(model2result[model_name]["accuracy"], model2result[model_name]["precision"],
               model2result[model_name]["recall"], model2result[model_name]["f1_score"])
 
-    base_figures_path = os.path.join("evaluation", figures_path)
+    base_figures_path = os.path.join(".", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     for param in ["accuracy", "precision", "recall", "f1_score"]:

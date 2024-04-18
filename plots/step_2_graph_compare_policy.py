@@ -102,7 +102,7 @@ def parse_args() -> argparse.Namespace:
 def main(args: argparse.Namespace):
     files = []
 
-    results_files_list = glob.glob(os.path.join("evaluation", args.results_path, f"code-*-gpt-4-*.csv"))
+    results_files_list = glob.glob(os.path.join(".", args.results_path, f"code-*-gpt-4-*.csv"))
 
     for file in results_files_list:
         res = extract_result(file)

@@ -135,7 +135,7 @@ def plot(figures_path: str, results: dict) -> None:
             to_plot_bars[mode]["max_y"].append(max(it_sim) if it_sim else 0)
             to_plot_bars[mode]["success"].append(str(total_runs - len(with_failures)))
 
-    base_figures_path = os.path.join("evaluation", figures_path)
+    base_figures_path = os.path.join(".", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     plt.clf()
@@ -221,7 +221,7 @@ def plot_by_rag(figures_path: str, results: dict) -> None:
             to_plot_lines[scenario]["min_y"].append(min(it_sim) if it_sim else 0)
             to_plot_lines[scenario]["max_y"].append(max(it_sim) if it_sim else 0)
 
-    base_figures_path = os.path.join("evaluation", figures_path)
+    base_figures_path = os.path.join(".", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     plt.clf()
@@ -285,7 +285,7 @@ def plot_rag_fusion(figures_path: str, results: dict) -> None:
             to_plot_bars[mode]["max_y"].append(max(it_sim) if it_sim else 0)
             to_plot_bars[mode]["success"].append(str(total_runs - len(with_failures)) + "/" + str(total_runs))
 
-    base_figures_path = os.path.join("evaluation", figures_path)
+    base_figures_path = os.path.join(".", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     plt.clf()
@@ -346,7 +346,7 @@ def parse_args() -> argparse.Namespace:
 
 def main(args: argparse.Namespace) -> None:
     mode2avg = {}
-    results_files_list = glob.glob(os.path.join("evaluation", args.results_path, "*.csv"))
+    results_files_list = glob.glob(os.path.join(".", args.results_path, "*.csv"))
     if results_files_list:
         for results_file in results_files_list:
             print(f"Working on {results_file}...")
