@@ -139,7 +139,7 @@ def main(args: argparse.Namespace) -> None:
         os.path.abspath(
             os.path.join(
                 args.results_path,
-                f"log-{args.model}-{'_'.join(policy_types)}-function_{'adhoc' if args.adhoc else 'native'}-{results_time}.log"
+                f"log-{args.model}-{'adhoc' if args.adhoc else 'native'}-{'_'.join(policy_types)}-function-{results_time}.log"
             )
         )
     )

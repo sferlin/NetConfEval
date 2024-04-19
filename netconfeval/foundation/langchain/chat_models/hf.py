@@ -40,7 +40,7 @@ def _parse_chat_history(history: List[BaseMessage]) -> list[str]:
 class ChatHF(BaseChatModel):
     model_name: str
     max_length: int
-    temperature: float
+    temperature: float | None
     use_quantization: bool
     text_pipeline: Any
     prompt_func: Any
@@ -50,6 +50,8 @@ class ChatHF(BaseChatModel):
     # For example: find /opt/cuda/ -name "libcusparse.so"
     # and then add it to the path For example: export LD_LIBRARY_PATH="/opt/cuda/11.8.0/targets/x86_64-linux/lib/:$LD_LIBRARY_PATH"
     # And then run `python -m bitsandbytes`
+
+    #TODO: add parameter, plot by model name
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)

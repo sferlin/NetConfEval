@@ -10,22 +10,22 @@ import numpy as np
 from sortedcontainers import SortedSet
 
 model2plot = {
-    "gpt-3.5-1106-function-ad-hoc": {
+    "gpt-3.5-1106-adhoc": {
         "label": "GPT-3.5-Turbo",
         "color": "#984ea3",
         "marker": ">"
     },
-    "gpt-4-turbo-function": {
+    "gpt-4-1106-native": {
         "label": "GPT-4-Turbo (Native)",
         "color": "#e41a1c",
         "marker": "s"
     },
-    "gpt-4-turbo-ad-hoc": {
+    "gpt-4-turbo-adhoc": {
         "label": "GPT-4-Turbo (Ad-hoc)",
         "color": "#377eb8",
         "marker": "o"
     },
-    "codellama-7b-instruct-ad-hoc": {
+    "codellama-7b-instruct-adhoc": {
         "label": "CL-7B-Instruct",
         "color": "#f781bf",
         "marker": "^"
@@ -84,7 +84,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
 
     for model_name in model2plot.keys():
         results_files_list = glob.glob(
-            os.path.join(".", results_path, f"result-{model_name}-{requirements_str}-*.csv")
+            os.path.join("../", results_path, f"result-{model_name}-{requirements_str}-*.csv")
         )
         if results_files_list:
             results_file = results_files_list.pop()
@@ -150,8 +150,8 @@ def main(args: argparse.Namespace) -> None:
     matplotlib.rcParams['pdf.fonttype'] = 42
     matplotlib.rcParams['ps.fonttype'] = 42
 
-    plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability"}))
-    plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability", "waypoint"}))
+    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability"}))
+    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability", "waypoint"}))
     plot_by_requirements(args.results_path, args.figures_path, SortedSet({"loadbalancing", "reachability", "waypoint"}))
 
 

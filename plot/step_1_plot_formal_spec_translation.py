@@ -10,24 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sortedcontainers import SortedSet
 
-model2plot = {
-    "gpt-4-turbo--": {
-        "label": "gpt-4-turbo",
-        "color": "#377eb8",
-        "marker": "s"
-    },
-    "gpt-4-turbo-function--": {
-        "label": "gpt-4-turbo-function",
-        "color": "#984ea3",
-        "marker": "^"
-    },
-    "gpt-4-turbo-function-ad_hoc": {
-        "label": "gpt-4-turbo-function-ad_hoc",
-        "color": "#a65628",
-        "marker": "o"
-    },
-}
-
 
 def extract_result(file_path: str, model_name: str) -> (dict, dict):
     average = {}
@@ -37,13 +19,13 @@ def extract_result(file_path: str, model_name: str) -> (dict, dict):
         for res in reader:
             n_req = int(res["batch_size"])
             # for a figure
-            # if n_req * int(res["n_policy_types"]) == 25:
-            #     continue
+            if n_req * int(res["n_policy_types"]) == 25:
+                continue
 
             if n_req not in average:
                 average[n_req] = {
                     "batch_size": int(res["batch_size"]),
-                    "n_policy_types": int(1),
+                    "n_policy_types": int(res["n_policy_types"]),
                     "max_n_requirements": int(res["max_n_requirements"]),
                     "accuracy": {},
                     "cost": {},
@@ -57,14 +39,14 @@ def extract_result(file_path: str, model_name: str) -> (dict, dict):
 
             average[n_req]["accuracy"][it].append(float(res["accuracy"]))
 
-            cost = float(res["total_cost"]) / int(n_req)
+            cost = float(res["total_cost"]) / (int(n_req) * int(res["n_policy_types"]))
 
             if model_name == "gpt-4-turbo-function":
                 cost = (float(res["prompt_tokens"]) * 0.01 + float(res["completion_tokens"]) * 0.03) / (
-                        int(n_req) * int(1)) / 1000
+                        int(n_req) * int(res["n_policy_types"])) / 1000
             elif model_name == "gpt-3.5-finetuned":
                 cost = (float(res["prompt_tokens"]) * 0.012 + float(res["completion_tokens"]) * 0.016) / (
-                        int(n_req) * int(1)) / 1000
+                        int(n_req) * int(res["n_policy_types"])) / 1000
 
             if cost == 0:
                 continue
@@ -72,17 +54,14 @@ def extract_result(file_path: str, model_name: str) -> (dict, dict):
 
     to_plot_accuracy = {"x": [], "y": [], "min_y": [], "max_y": []}
     to_plot_cost = {"x": [], "y": [], "min_y": [], "max_y": []}
-
     for n_req, avg in average.items():
-        # print(avg["accuracy"])
-        # exit()
         it_acc = []
         for accuracy in avg["accuracy"].values():
             it_acc.append(
-                sum([x * avg["batch_size"] for x in accuracy]) / (avg["batch_size"] / avg["n_policy_types"])
+                sum([x * avg["batch_size"] for x in accuracy]) / (avg["max_n_requirements"] / avg["n_policy_types"])
             )
 
-        to_plot_accuracy["x"].append(n_req)
+        to_plot_accuracy["x"].append(n_req * int(res["n_policy_types"]))
         to_plot_accuracy["y"].append(statistics.mean(it_acc) if len(it_acc) >= 1 else it_acc[0])
         to_plot_accuracy["min_y"].append(min(it_acc))
         to_plot_accuracy["max_y"].append(max(it_acc))
@@ -90,67 +69,48 @@ def extract_result(file_path: str, model_name: str) -> (dict, dict):
         it_cost = []
         for cost in avg["cost"].values():
             it_cost.append(
-                statistics.mean(cost) if len(cost) >= 1 else 0
+                statistics.mean([x for x in cost if x > 0]) if len(cost) > 0 else 0
             )
 
-        to_plot_cost["x"].append(n_req * int(1))
+        it_cost = [x for x in it_cost if x > 0]
+
+        to_plot_cost["x"].append(n_req * int(res["n_policy_types"]))
         to_plot_cost["y"].append(
-            statistics.mean(it_cost)
+            statistics.mean(it_cost) if len(it_cost) > 0 else 0
         )
-        to_plot_cost["min_y"].append(min(it_cost))
-        to_plot_cost["max_y"].append(max(it_cost))
+        to_plot_cost["min_y"].append(min(it_cost) if len(it_cost) > 0 else 0)
+        to_plot_cost["max_y"].append(max(it_cost) if len(it_cost) > 0 else 0)
 
     return to_plot_accuracy, to_plot_cost
 
 
-def plot_by_requirements(results_path: str, figures_path: str, requirements_1: SortedSet, requirements_2: SortedSet,
-                         requirements_3: SortedSet) -> None:
-    model2result = {}
-
-    reqs = [requirements_1, requirements_2, requirements_3]
-
-    plt.figure(figsize=(4, 2))
-    ax = plt.gca()
-    # for requirements in reqs:
-    #     requirements_str = "_".join(requirements)
-    #     print(requirements_str)
-
-    model_name = "gpt-4-turbo"
-
-    results_files_list = glob.glob(os.path.join(".", results_path, f"result-{model_name}-*.csv"))
-    count = 1
-    while results_files_list:
-        results_file = results_files_list.pop()
-
-        # print(results_file)
-
-        file_name = str(results_file)
-
-        if "gpt-4-turbo--" in results_file:
-            file_name = "gpt-4-turbo--"
-        elif "gpt-4-turbo-function--" in results_file:
-            file_name = "gpt-4-turbo-function--"
-        elif "gpt-4-turbo-function-ad_hoc" in results_file:
-            file_name = "gpt-4-turbo-function-ad_hoc"
-
-        count += 1
-
-        if file_name not in model2result:
-            model2result[file_name] = {}
-
-        model2result[file_name]["accuracy"], model2result[file_name]["cost"] = extract_result(
-            results_file, model_name)
-
-    # print(model2result)
+def plot_by_requirements(results_path: str, figures_path: str, requirements: SortedSet, model2plot) -> None:
+    # print(model2plot)
     # exit()
+    model2result = {}
+    requirements_str = "_".join(requirements)
 
-    base_figures_path = os.path.join(".", figures_path)
+    for model_name in model2plot.keys():
+
+        results_files_list = glob.glob(os.path.join("../", results_path, f"result-{model_name}-{requirements_str}-*.csv"))
+        if results_files_list:
+            results_file = results_files_list.pop()
+
+            if model_name not in model2result:
+                model2result[model_name] = {}
+
+            model2result[model_name]["accuracy"], model2result[model_name]["cost"] = extract_result(results_file,
+                                                                                                    model_name)
+
+    base_figures_path = os.path.join("../plot", figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
-    print("Model result: \n", model2result)
+    # Accuracy
+    plt.figure(figsize=(4, 2))
+    ax = plt.gca()
 
-    for file_name, results in model2result.items():
-        model_params = model2plot[file_name]
+    for model, results in model2result.items():
+        model_params = model2plot[model]
         print(results["accuracy"]["y"])
         plt.plot(results["accuracy"]["x"], results["accuracy"]["y"],
                  marker=model_params["marker"],
@@ -173,25 +133,27 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements_1: S
     plt.ylim([-0.1, 1.2])
     plt.yticks(np.arange(0, 1.2, 0.25))
     plt.xscale('log', base=10)
-    plt.xticks(model2result[list(model2plot.keys())[0]]["accuracy"]["x"])
+
+    # print(model2result)
+    # exit()
+    x_ticks = list(model2result.values())[0]["accuracy"]["x"]
+    plt.xticks(x_ticks)
     ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    plt.legend(loc="lower left", labelspacing=0.1, ncol=1)
+    plt.legend(loc="lower left", labelspacing=0.1, ncol=1, prop={'size': 9})
     plt.xlabel('Batch Size')
     plt.ylabel('Accuracy')
     plt.grid(True)
-    plt.savefig(os.path.join(base_figures_path, f"accuracy-function-call.pdf"),
+    plt.savefig(os.path.join(base_figures_path, f"accuracy-{requirements_str}.pdf"),
                 format="pdf", bbox_inches='tight')
 
     # Cost
-    plt.clf()
-    mpl.rc('font', size=10)
-    plt.figure(figsize=(4, 2.2))
+    plt.figure(figsize=(4, 2))
     ax = plt.gca()
-
-    for requirements_str, results in model2result.items():
+    for model, results in model2result.items():
         if any([x > 0 for x in results["cost"]["y"]]):
-            model_params = model2plot[requirements_str]
-            print(results["cost"]["y"])
+            model_params = model2plot[model]
+            results["cost"]["y"] = list(filter(lambda x: x > 0, results["cost"]["y"]))
+            results["cost"]["x"] = results["cost"]["x"][0:len(results["cost"]["y"])]
             plt.plot(results["cost"]["x"], results["cost"]["y"],
                      marker=model_params["marker"],
                      fillstyle='none',
@@ -211,20 +173,16 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements_1: S
                 )
 
     plt.xscale('log', base=10)
-    print(model2result[list(model2plot.keys())[0]]["accuracy"]["x"])
-    plt.xticks(model2result[list(model2plot.keys())[0]]["accuracy"]["x"])
+    x_ticks = list(model2result.values())[0]["accuracy"]["x"]
+    plt.xticks(x_ticks)
+    plt.ylim(0.00001, 0.02)
     ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    plt.legend(loc="lower left", labelspacing=0.1, ncol=1)
+    plt.legend(loc='lower left', labelspacing=0.1, ncol=1, prop={'size': 9})
     plt.xlabel('Batch Size')
     plt.ylabel('Cost [$]')
     plt.yscale('log', base=10)
-    plt.ylim(0.0003, 0.005)
-    plt.yticks(
-        [0.0003, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005],
-        ['$3\\times10^{-4}$', '$4\\times10^{-4}$', '$10^{-3}$', '$2\\times10^{-3}$', '$3\\times10^{-3}$', None, None]
-    )
     plt.grid(True)
-    plt.savefig(os.path.join(base_figures_path, f"cost-function-call.pdf"),
+    plt.savefig(os.path.join(base_figures_path, f"cost-{requirements_str}.pdf"),
                 format="pdf", bbox_inches='tight')
 
 
@@ -232,24 +190,58 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--results_path', type=str, required=False, default="result")
     parser.add_argument('--figures_path', type=str, required=True)
+    parser.add_argument("--models", type=str, choices=["gpt", "codellama"])
 
     return parser.parse_args()
 
 
 def main(args: argparse.Namespace) -> None:
-    plt.figure(figsize=(4, 2))
-    mpl.rc('font', size=10)
-    mpl.rcParams['hatch.linewidth'] = 0.3
-    mpl.rcParams['pdf.fonttype'] = 42
-    mpl.rcParams['ps.fonttype'] = 42
+    matplotlib.rc('font', size=10)
+    matplotlib.rcParams['hatch.linewidth'] = 0.3
+    matplotlib.rcParams['pdf.fonttype'] = 42
+    matplotlib.rcParams['ps.fonttype'] = 42
 
-    plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability"}),
-                         SortedSet({"reachability", "waypoint"}),
-                         SortedSet({"loadbalancing", "reachability", "waypoint"}))
-    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability", "waypoint"}))
-    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"loadbalancing", "reachability", "waypoint"}))
+    if args.models == "gpt":
+        model2plot = {
+            "gpt-4-1106": {
+                "label": "GPT-4-Turbo",
+                "color": "#377eb8",
+                "marker": "o"
+            },
+            "gpt-3.5-finetuned": {
+                "label": "GPT-3.5-FT",
+                "color": "#a65628",
+                "marker": "s"
+            },
+            "gpt-3.5-0613": {
+                "label": "GPT-3.5-Turbo",
+                "color": "#984ea3",
+                "marker": ">"
+            },
+        }
+    if args.models == "codellama":
+        model2plot = {
+            "codellama-13b-instruct": {
+                "label": "CL-13B-Instruct",
+                "color": "#ff7f00",
+                "marker": "<"
+            },
+            "codellama-7b-instruct-finetuned": {
+                "label": "CL-7B-Instruct-FT (QLoRA)",
+                "color": "#4daf4a",
+                "marker": ">"
+            },
+            "codellama-7b-instruct": {
+                "label": "CL-7B-Instruct",
+                "color": "#f781bf",
+                "marker": "^"
+            },
+        }
 
-    # plt.plot(req_bard, accuracy_bard, marker='s', fillstyle='none', linestyle='--', color='gold', label='BARD')
+    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability"}), model2plot)
+    # plot_by_requirements(args.results_path, args.figures_path, SortedSet({"reachability", "waypoint"}), model2plot)
+    plot_by_requirements(args.results_path, args.figures_path,
+                         SortedSet({"loadbalancing", "reachability", "waypoint"}), model2plot)
 
 
 if __name__ == "__main__":

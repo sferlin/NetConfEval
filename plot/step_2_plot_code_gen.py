@@ -102,22 +102,36 @@ def parse_args() -> argparse.Namespace:
 def main(args: argparse.Namespace):
     files = []
 
-    results_files_list = glob.glob(os.path.join(".", args.results_path, f"code-*-gpt-4-*.csv"))
+    print(os.path.join(args.results_path, f"code-gpt-4-*.csv"))
+
+    results_files_list = glob.glob(os.path.join('../', args.results_path, f"code-gpt-4-*.csv"))
+
+    # print(results_files_list)
+    # exit()
 
     for file in results_files_list:
+
         res = extract_result(file)
-        match = re.match(".*-(gpt-4-.*)-1.*\.csv", file)
-        name = match.group(1)
-        label = ""
-        print(name)
-        if name == "gpt-4-turbo-basic" or name == "gpt-4-basic":
+        if "basic-with_feedback" in file:
             label = "w/ Instruction w/ Feedback"
-        elif name == "gpt-4-turbo-basic-without_feedback" or name == "gpt-4-without_feedback":
+        elif "basic-without_feedback" in file:
             label = "w/ Instruction w/o Feedback"
-        elif name == "gpt-4-turbo-without_detail" or name == "gpt-4-without_detail":
+        elif "no_detail-with_feedback" in file:
             label = "w/o Instruction w/ Feedback"
-        elif name == "gpt-4-turbo-without_detail-without_feedback" or name == "gpt-4-without_detail_without_feedback":
+        elif "no_detail-without_feedback" in file:
             label = "w/o Instruction w/o Feedback"
+
+        # match = re.match(".*-(gpt-4-.*)-1.*\.csv", file)
+        # name = match.group(1)
+        # label = ""
+        # if name == "gpt-4-turbo-basic" or name == "gpt-4-basic":
+        #     label = "w/ Instruction w/ Feedback"
+        # elif name == "gpt-4-turbo-basic-without_feedback" or name == "gpt-4-without_feedback":
+        #     label = "w/ Instruction w/o Feedback"
+        # elif name == "gpt-4-turbo-without_detail" or name == "gpt-4-without_detail":
+        #     label = "w/o Instruction w/ Feedback"
+        # elif name == "gpt-4-turbo-without_detail-without_feedback" or name == "gpt-4-without_detail_without_feedback":
+        #     label = "w/o Instruction w/o Feedback"
         files.append({"legend": label, "res": res})
 
     files.sort(key=lambda x: len(x["legend"]), reverse=True)

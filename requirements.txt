@@ -12,3 +12,5 @@ scikit-learn
 pdfminer.six
 tiktoken
 deepdiff
+matplotlib
+seaborn

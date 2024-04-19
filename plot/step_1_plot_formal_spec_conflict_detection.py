@@ -13,25 +13,53 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from sortedcontainers import SortedSet
-from src.utils import strtobool
+# TODO: change the location of "combined" in experiments
+# TODO: add model_selection
+
+def strtobool(val: str) -> bool:
+    """Convert a string representation of truth to true or false.
+
+    Args:
+        val (str): The value to convert. True values are 'y', 'yes', 't', 'true', 'on', and '1';
+            false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+
+        Returns:
+            bool: The value converted to bool.
+
+        Raises:
+            ValueError: If the specified value is not a valid representation of truth.
+    """
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f"Invalid truth value `{val}`.")
+
 
 model2plot = {
-    "gpt-4-turbo": {
+    "gpt-4-1106": {
         "label": "GPT-4-Turbo",
         "color": "#377eb8",
         "marker": "o"
     },
-    "gpt-4": {
+    "gpt-4-": {
         "label": "GPT-4",
-        "color": "#e41a1c",
+        "color": "#a65628",
         "marker": "s"
     },
-    "gpt-3.5-turbo": {
+    "gpt-3.5-0613": {
         "label": "GPT-3.5-Turbo",
-        "color": "#4daf4a",
+        "color": "#984ea3",
         "marker": ">"
     },
-    "gpt-4-combined": {
+    # "gpt-4-turbo-function": {
+    #     "label": "gpt-4-turbo-function",
+    #     "color": "#e41a1c",
+    #     "marker": "1"
+    # },
+    "gpt-4-1106-combined": {
         "label": "GPT-4 (Combined)",
         "color": "#984ea3",
         "marker": "<"
@@ -141,7 +169,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
     model_list = model2plot.keys()
     for model_name in model_list:
         results_files_list = glob.glob(
-            os.path.join(".", results_path, f"result-{model_name}-{requirements_str}-conflict-*.csv"))
+            os.path.join("../", results_path, f"result-{model_name}-{requirements_str}-conflict-*.csv"))
 
         if len(results_files_list) == 0:
             continue
@@ -158,7 +186,7 @@ def plot_by_requirements(results_path: str, figures_path: str, requirements: Sor
         print(model2result[model_name]["accuracy"], model2result[model_name]["precision"],
               model2result[model_name]["recall"], model2result[model_name]["f1_score"])
 
-    base_figures_path = os.path.join(".", figures_path)
+    base_figures_path = os.path.join(figures_path)
     os.makedirs(base_figures_path, exist_ok=True)
 
     for param in ["accuracy", "precision", "recall", "f1_score"]:

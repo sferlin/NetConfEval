@@ -69,7 +69,7 @@ def main(args: argparse.Namespace) -> None:
         os.path.abspath(
             os.path.join(
                 args.results_path,
-                f"log-{args.model}-{'_'.join(policy_types)}-conflict-{results_time}.log"
+                f"log-{args.model}{"-combined" if args.combined else ""}-{'_'.join(policy_types)}-conflict-{results_time}.log"
             )
         )
     )
@@ -100,7 +100,7 @@ def main(args: argparse.Namespace) -> None:
     max_n_requirements = max(args.batch_size) * n_policy_types
     w = None
 
-    filename = f"result-{args.model}-{'_'.join(policy_types)}-conflict-{results_time}.csv"
+    filename = f"result-{args.model}-{'_'.join(policy_types)}-conflict{"-combined" if args.combined else ""}-{results_time}.csv"
 
     with open(os.path.join(args.results_path, filename), 'w') as f:
         for it in range(0, args.n_runs):
