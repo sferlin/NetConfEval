@@ -175,7 +175,7 @@ def main(args: argparse.Namespace) -> None:
     max_n_requirements = max(args.batch_size) * n_policy_types
     w = None
 
-    filename = f"result-{args.model}-{'_'.join(policy_types)}-function_{'adhoc' if args.adhoc else 'native'}-{results_time}.csv"
+    filename = f"result-{args.model}-{'adhoc' if args.adhoc else 'native'}-{'_'.join(policy_types)}-function-{results_time}.csv"
 
     with open(os.path.join(args.results_path, filename), 'w') as f:
         for it in range(0, args.n_runs):

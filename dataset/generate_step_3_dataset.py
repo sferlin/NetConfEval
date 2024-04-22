@@ -1,6 +1,4 @@
 import argparse
-import csv
-import difflib
 import io
 import ipaddress
 import json
@@ -8,48 +6,14 @@ import logging
 import os
 import re
 import sys
-import time
-from string import whitespace
 
 from Kathara.manager.Kathara import Kathara
 from Kathara.model.Lab import Lab
 from Kathara.model.Machine import Machine
-from langchain.chains import LLMChain
-from langchain.prompts import ChatPromptTemplate
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.callbacks import get_openai_callback
-from langchain_community.document_loaders import PDFMinerLoader
-from langchain_community.vectorstores import Chroma
-from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from netconfeval.common.model_configs import model_configurations
-from netconfeval.foundation.step.chain_step import ChainStep
 from netconfeval.prompts.step_3_low_level import *
-
-
-def text_from_pdf(pdf_path: str) -> str:
-    loader = PDFMinerLoader(pdf_path)
-    pdf_data = loader.load()
-    text = pdf_data[0].page_content
-    text = text.replace('\xa0', ' ').replace('{', '{{').replace('}', '}}')
-
-    return text
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=list(model_configurations.keys()), required=True)
-    parser.add_argument('--n_runs', type=int, required=False, default=5)
-    parser.add_argument(
-        '--results_path', type=str, default=os.path.join("..", "results_low_level")
-    )
-    parser.add_argument('--mode', type=str, choices=['none', 'full', 'idx', 'rag'])
-    parser.add_argument('--rag_chunk_size', type=int, required=False, default=9000)
-
-    return parser.parse_args()
 
 
 def start_container() -> Machine:
@@ -113,11 +77,6 @@ def format_config(config: str, daemon: str) -> str:
             final_conf.append(line)
 
     return "\n".join(final_conf)
-
-
-ignored_msgs: list = [
-    'sendmsg_nexthop',  # Ignores the fact that nexthops are not reachable
-]
 
 
 def apply_and_dump(machine: Machine, config_path: str, daemon: str) -> str:
@@ -408,34 +367,15 @@ def apply_rift(config: str) -> (list, list):
     return serialized_config, config_errors
 
 
-def run_rift(results: dict):
-    for name, result in results.items():
-        expected_for_rift = format_config(result["expected"], "riftd")
-        rift_expected, expected_errors = apply_rift(expected_for_rift)
-        generated_for_rift = format_config(result["generated"], "riftd")
-        logging.warning(f"{name} Formatted Generated:\n" + generated_for_rift)
-        rift_generated, generated_errors = apply_rift(generated_for_rift)
+def run_rift(results: dict) -> dict[str, str]:
+    name_to_formatted = {}
 
-        s = difflib.SequenceMatcher(
-            lambda x: x in whitespace or x.strip() == '!',
-            rift_expected,
-            rift_generated,
-            autojunk=False
-        )
-        result["diff_similarity_daemon"] = s.ratio()
-        logging.warning(f"RIFT Diff Similarity for {name}: " + str(result["diff_similarity_daemon"]))
+    for name, expected in results.items():
+        expected_for_rift = format_config(expected, "riftd")
+        rift_expected, _ = apply_rift(expected_for_rift)
+        name_to_formatted[name] = "\n".join(rift_expected)
 
-        d = difflib.Differ()
-        logging.warning(f"DIFFS for {name}:\n" + "\n".join(list(d.compare(rift_expected, rift_generated))))
-
-        if generated_errors:
-            logging.info("There are some errors in the configuration!")
-            result["daemon_errors"] = generated_errors
-            result["n_daemon_errors"] = len(generated_errors)
-            logging.warning(str(result["n_daemon_errors"]) + " RIFT Errors found:\n" + str(generated_errors))
-        else:
-            result["daemon_errors"] = []
-            result["n_daemon_errors"] = 0
+    return name_to_formatted
 
 
 scenario_to_daemon: dict = {
@@ -447,87 +387,34 @@ scenario_to_daemon: dict = {
 }
 
 
-def run_results(scenario: str, results: dict, machine: Machine) -> None:
+def run_results(scenario: str, results: dict, machine: Machine) -> dict[str, str] | None:
     daemon = scenario_to_daemon[scenario]
     if daemon is None:
         logging.info(f"Cannot evaluate scenario {scenario} since it is unsupported.")
-        return
+        return None
 
     if not isinstance(daemon, str):
         logging.info(f"Running custom daemon parser for scenario {scenario}...")
-        daemon(results)
-        return
+        return daemon(results)
 
     guest_to_host = {}
-    for name, result in results.items():
-        expected_for_frr = format_config(result["expected"], daemon)
+    for name, expected in results.items():
+        expected_for_frr = format_config(expected, daemon)
         guest_to_host[f"/expected/{name}"] = io.StringIO(expected_for_frr)
-        generated_for_frr = format_config(result["generated"], daemon)
-        logging.warning(f"{name} Formatted Generated:\n" + generated_for_frr)
-        guest_to_host[f"/gpt/{name}"] = io.StringIO(generated_for_frr)
     guest_to_host["/etc/frr/daemons"] = io.StringIO(f"{daemon}=yes")
 
     Kathara.get_instance().copy_files(machine, guest_to_host)
 
     # At this point we can run the check
+    name_to_formatted = {}
     for name, result in results.items():
         # Load the expected configuration in FRR
         logging.warning(f"Loading EXPECTED configuration in FRR container")
-        frr_expected = apply_and_dump(machine, f"/expected/{name}", daemon)
+        name_to_formatted[name] = apply_and_dump(machine, f"/expected/{name}", daemon)
 
-        # Load the generated configuration in FRR
-        logging.warning(f"Loading GENERATED configuration in FRR container")
-        frr_generated = apply_and_dump(machine, f"/gpt/{name}", daemon)
-
-        split_frr_expected = frr_expected.splitlines()
-        split_frr_generated = frr_generated.splitlines()
-        s = difflib.SequenceMatcher(
-            lambda x: x in whitespace or x.strip() == '!',
-            split_frr_expected,
-            split_frr_generated,
-            autojunk=False
-        )
-        result["diff_similarity_daemon"] = s.ratio()
-        logging.warning(f"FRR Diff Similarity for {name}: " + str(result["diff_similarity_daemon"]))
-
-        d = difflib.Differ()
-        logging.warning(f"DIFFS for {name}:\n" + "\n".join(list(d.compare(split_frr_expected, split_frr_generated))))
-
-        command = f"/usr/lib/frr/{daemon} -f /gpt/{name} -C"
-        exec_output = Kathara.get_instance().exec(machine.name, command, lab=machine.lab)
-        frr_stderr = ""
-        try:
-            while True:
-                (_, stderr) = next(exec_output)
-                stderr = stderr.decode('utf-8') if stderr else ""
-
-                if stderr:
-                    frr_stderr += stderr
-        except StopIteration:
-            pass
-
-        stderr_split = []
-        for line in frr_stderr.split("\n"):
-            if not line.startswith("%") and line:
-                ignored = False
-                for err in ignored_msgs:
-                    if err in line:
-                        ignored = True
-                        break
-                if not ignored:
-                    stderr_split.append(line)
-
-        if stderr_split:
-            logging.info("There are some errors in the configuration!")
-            result["daemon_errors"] = stderr_split
-            result["n_daemon_errors"] = len(stderr_split)
-            logging.warning(str(result["n_daemon_errors"]) + " FRR Errors found:\n" + str(stderr_split))
-        else:
-            result["daemon_errors"] = []
-            result["n_daemon_errors"] = 0
-
-    Kathara.get_instance().exec(machine.name, 'rm -Rf /gpt', lab=machine.lab)
     Kathara.get_instance().exec(machine.name, 'rm -Rf /expected', lab=machine.lab)
+
+    return name_to_formatted
 
 
 dataset: dict = {
@@ -660,6 +547,15 @@ dataset: dict = {
 }
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--results_path', type=str, default=os.path.join("..", "datasets")
+    )
+
+    return parser.parse_args()
+
+
 def main(args: argparse.Namespace) -> None:
     logging.basicConfig(
         format='[%(levelname)s] %(message)s',
@@ -671,244 +567,46 @@ def main(args: argparse.Namespace) -> None:
 
     os.makedirs(args.results_path, exist_ok=True)
 
-    rag_lbl = f'-rag_{args.rag_chunk_size}'
-    results_time = time.strftime("%Y%m%d-%H%M%S")
-    file_handler = logging.FileHandler(
-        os.path.abspath(
-            os.path.join(args.results_path, f"log-{args.model}-{results_time}-{args.mode}{rag_lbl}.log")
-        )
-    )
-    file_handler.setFormatter(logging.Formatter('%(message)s'))
-    file_handler.setLevel(logging.WARNING)
-    logging.root.addHandler(file_handler)
-
     assets_path = os.path.abspath(os.path.join('..', 'assets', 'step_3_low_level'))
-    index_text = None
-    db = {}
-    if args.mode == 'idx':
-        index_text = text_from_pdf(os.path.join(assets_path, "index-patched.pdf"))
-    elif args.mode == "rag":
-        doc_names = ["3.3.pdf", "3.11.pdf", "3.17.pdf", "3.26.pdf"]
-        documents = []
-        for doc_name in doc_names:
-            docs_path = os.path.join(assets_path, doc_name)
-
-            loader = PDFMinerLoader(docs_path)
-            pdf_data = loader.load()
-            documents.extend(pdf_data)
-
-        logging.info(f"Creating RAG DB with chunk size={args.rag_chunk_size}...")
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=args.rag_chunk_size, chunk_overlap=0, separators=["\n\n", "\n", " ", ""]
-        )
-        chunks = text_splitter.split_documents(documents)
-        db = Chroma.from_documents(chunks, OpenAIEmbeddings())
-
-    if model_configurations[args.model]['type'] == 'openai':
-        llm = ChatOpenAI(
-            model_name=model_configurations[args.model]['model_name'],
-            model_kwargs=model_configurations[args.model]['args'],
-        )
-    else:
-        raise Exception(f"Type `{model_configurations[args.model]['type']}` for model `{args.model}` not supported!")
 
     # Start the Kathara machine with FRRouting
     frr_device = start_container()
 
-    w = None
+    with open(os.path.join(args.results_path, "step_3_low_level.jsonl"), "w") as f:
+        for name, data in dataset.items():
+            logging.info(f"Generating data for `{name}`...")
 
-    filename = f"result-{args.model}-{results_time}-{args.mode}{rag_lbl}.csv"
-    with (open(os.path.join(args.results_path, filename), 'w') as f):
-        for it in range(0, args.n_runs):
-            logging.info(f"Performing iteration n. {it + 1}...")
+            lab_path = os.path.join(assets_path, name)
+            with open(os.path.join(lab_path, 'lab.conf')) as lab_file:
+                topology = "".join(lab_file.readlines())
 
-            for name, data in dataset.items():
-                logging.info(f"Performing experiment `{name}` (iteration n. {it + 1})...")
+            combined_human_prompt = f"{NETWORK_DESCRIPTION}\n"
+            combined_human_prompt += NETWORK_DESCRIPTION_USER.format(topology=topology) + "\n"
+            combined_human_prompt += OUTPUT_FORMAT
 
-                additional_rows = {}
-                if args.mode == 'rag':
-                    additional_rows = {'chunk_size': args.rag_chunk_size}
+            dev2configs = {}
+            conf_path = os.path.join(lab_path, "configs")
+            for dev_conf in filter(lambda x: not x.startswith('.'), os.listdir(conf_path)):
+                dev_name, _ = os.path.splitext(dev_conf)
+                with open(os.path.join(conf_path, dev_conf)) as dev_file:
+                    expected = "".join(dev_file.readlines())
 
-                result_row = {
-                    'scenario_name': name,
-                    'iteration': it,
-                    'mode': args.mode,
-                    'prompt_tokens': 0,
-                    'completion_tokens': 0,
-                    'total_cost': 0,
-                    'result': None,
-                    'format_error': None,
-                    'model_error': None,
-                    'time': 0,
-                    **additional_rows
-                }
+                clean_expected = expected.replace('!', '')
+                clean_expected = [re.sub(r"^ +", "", x) for x in clean_expected.split('\n')]
+                clean_expected = [x for x in clean_expected if x]
 
-                if w is None:
-                    w = csv.DictWriter(f, result_row.keys())
-                    w.writeheader()
+                dev2configs[dev_name] = "\n".join(clean_expected)
 
-                lab_path = os.path.join(assets_path, name)
-                with open(os.path.join(lab_path, 'lab.conf')) as lab_file:
-                    topology = "".join(lab_file.readlines())
+            formatted_expected = run_results(name, dev2configs, frr_device)
 
-                logging.warning(f"==== RUN #{it + 1} (SCENARIO {name}) ====")
+            result_row = {
+                'scenario_name': name,
+                'input': combined_human_prompt,
+                'result': json.dumps(formatted_expected),
+            }
 
-                messages = [
-                    ("system", SETUP_PROMPT),
-                    ("system", NETWORK_DESCRIPTION),
-                    ("human", NETWORK_DESCRIPTION_USER),
-                    ("human", "{goal}")
-                ]
-
-                goal_text = data['goal']
-
-                start_time = time.time()
-                if args.mode == 'idx':
-                    messages.append(("system", DOCS_INDEX))
-
-                    prompt_template = ChatPromptTemplate.from_messages(messages)
-                    llm_chain = LLMChain(
-                        llm=llm,
-                        prompt=prompt_template,
-                        verbose=True
-                    )
-                    chain_step = ChainStep(
-                        llm_chain=llm_chain,
-                        input_formatter=lambda x: x,
-                        output_formatter=lambda x: x
-                    )
-
-                    try:
-                        with get_openai_callback() as cb:
-                            _, sec_num = chain_step.process(
-                                {"topology": topology, "index": index_text, "goal": goal_text}
-                            )
-                            result_row['prompt_tokens'] = cb.prompt_tokens
-                            result_row['completion_tokens'] = cb.completion_tokens
-                            result_row['total_cost'] = cb.total_cost
-                    except Exception as e:
-                        logging.error(str(e))
-                        result_row['model_error'] = str(e)
-                        sec_num = "0"
-
-                    logging.warning("LLM Result: " + sec_num)
-                    if " " in sec_num:
-                        # Sometimes the response is "3.11 OSPF"
-                        sec_num_parts = sec_num.split(" ")
-                        sec_num_parts = [x for x in sec_num_parts if re.match(r'\d+\.\d+', x)]
-                        if sec_num_parts:
-                            sec_num = sec_num_parts.pop()
-
-                    doc_path = os.path.join(assets_path, f"{sec_num}.pdf")
-                    if not os.path.exists(doc_path):
-                        result_row['format_error'] = f"Section `{sec_num}` not correct for {name}."
-
-                        logging.error(result_row['format_error'])
-
-                        w.writerow(result_row)
-                        f.flush()
-
-                        continue
-
-                llm_call_args = {}
-                if args.mode == "idx":
-                    docs_text = text_from_pdf(doc_path)
-
-                    llm_call_args = {"topology": topology, "docs": docs_text, "goal": goal_text}
-                    messages = [
-                        ("system", SETUP_PROMPT),
-                        ("system", NETWORK_DESCRIPTION),
-                        ("human", NETWORK_DESCRIPTION_USER),
-                        ("human", "{goal}"),
-                        ("system", DOCS_STR),
-                        ("system", OUTPUT_FORMAT)
-                    ]
-                elif args.mode == "none":
-                    messages.extend([("system", OUTPUT_FORMAT)])
-
-                    llm_call_args = {"topology": topology, "goal": goal_text}
-                elif args.mode == "full":
-                    messages.extend([("system", DOCS_STR), ("system", OUTPUT_FORMAT)])
-
-                    docs_text = text_from_pdf(os.path.join(assets_path, "full-docs-shrink.pdf"))
-
-                    llm_call_args = {"topology": topology, "docs": docs_text, "goal": goal_text}
-                elif args.mode == "rag":
-                    relevant_docs_and_score = db.max_marginal_relevance_search(goal_text, k=8)
-
-                    logging.warning(f"========= RAG Relevant chunks ({args.rag_chunk_size}=========\n" +
-                                    "\n\n".join(["!!! CHUNK " + str(i) + " !!!\n" + x.page_content
-                                                 for i, x in enumerate(relevant_docs_and_score)]) +
-                                    f"\n===================================\n"
-                                    )
-
-                    relevant_docs_str = "\n".join([d.page_content for d in relevant_docs_and_score])
-
-                    messages.extend([("system", DOCS_STR), ("system", OUTPUT_FORMAT)])
-                    llm_call_args = {"topology": topology, "docs": relevant_docs_str, "goal": goal_text}
-
-                prompt_template = ChatPromptTemplate.from_messages(messages)
-                llm_chain = LLMChain(
-                    llm=llm,
-                    prompt=prompt_template,
-                    verbose=True
-                )
-                chain_step = ChainStep(
-                    llm_chain=llm_chain,
-                    input_formatter=lambda x: x,
-                    output_formatter=lambda x: x
-                )
-                try:
-                    with get_openai_callback() as cb:
-                        status, output = chain_step.process(
-                            llm_call_args
-                        )
-                        result_row['prompt_tokens'] += cb.prompt_tokens
-                        result_row['completion_tokens'] += cb.completion_tokens
-                        result_row['total_cost'] += cb.total_cost
-                except Exception as e:
-                    logging.error(str(e))
-                    result_row['model_error'] = str(e)
-                    output = {}
-                result_row['time'] = time.time() - start_time
-
-                logging.warning("LLM Result: " + str(output))
-
-                dev2configs = {}
-                conf_path = os.path.join(lab_path, "configs")
-                for dev_conf in filter(lambda x: not x.startswith('.'), os.listdir(conf_path)):
-                    dev_name, _ = os.path.splitext(dev_conf)
-                    with open(os.path.join(conf_path, dev_conf)) as dev_file:
-                        expected = "".join(dev_file.readlines())
-
-                    generated = output[dev_name] if dev_name in output else ""
-                    generated = generated if type(generated) is str else "\n".join(generated) \
-                        if generated is not None else ""
-
-                    clean_expected = expected.replace('!', '')
-                    clean_expected = [re.sub(r"^ +", "", x) for x in clean_expected.split('\n')]
-                    clean_expected = [x for x in clean_expected if x]
-                    clean_generated = generated.replace('!', '')
-                    clean_generated = [re.sub(r"^ +", "", x) for x in clean_generated.split('\n')]
-                    clean_generated = [x for x in clean_generated if x]
-
-                    s = difflib.SequenceMatcher(lambda x: "[PLACEHOLDER]" in x, clean_generated, clean_expected)
-                    diff_similarity = s.ratio()
-
-                    dev2configs[dev_name] = {
-                        'expected': expected,
-                        'generated': generated,
-                        'diff_similarity': diff_similarity,
-                    }
-
-                run_results(name, dev2configs, frr_device)
-
-                result_row['result'] = json.dumps(dev2configs)
-
-                logging.warning("==================================================================")
-
-                w.writerow(result_row)
-                f.flush()
+            f.write(json.dumps(result_row) + "\n")
+            f.flush()
 
     stop_container(frr_device)
 

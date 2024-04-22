@@ -59,10 +59,18 @@ def pick_sample(n: int, requirements: list, it: int, policy_types: SortedSet[str
 
         if "loadbalancing" in policy_types:
             loadbalancing_samples = [
-                x for x in requirements if x["type"] == "loadbalancing" and x["source"] == sample["source"]
+                x for x in requirements \
+                if x["type"] == "loadbalancing" and x["source"] == sample["source"] and x["subnet"] == sample["subnet"]
             ]
-            filtered_sample = None if not loadbalancing_samples else loadbalancing_samples.pop()
-            filtered_sample["subnet"] = sample["subnet"]
+            if loadbalancing_samples:
+                filtered_sample = loadbalancing_samples.pop()
+            else:
+                loadbalancing_samples = [
+                    x for x in requirements if x["type"] == "loadbalancing" and x["source"] == sample["source"]
+                ]
+                filtered_sample = None if not loadbalancing_samples else loadbalancing_samples.pop()
+                filtered_sample["subnet"] = sample["subnet"]
+
             final_list.append(filtered_sample)
 
     return final_list[:n]
