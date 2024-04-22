@@ -61,7 +61,7 @@ Traffic engineering is a critical yet complex problem in network management, par
 To run the experiment:
 
 ```bash
-python3 step_2_code_gen.py --model gpt-4-1106 --n_runs 1 --policy_types shortest_path reachability waypoint loadbalancing --n_retries 10; 
+python3 step_2_code_gen.py --model gpt-4-1106 --n_runs 1 --policy_types shortest_path reachability waypoint loadbalancing --n_retries 10
 ```
 
 The experiment results will be stored in the directory named `results_code_gen` by default.
