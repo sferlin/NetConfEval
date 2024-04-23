@@ -168,4 +168,4 @@ If you use NetConfEval, please cite our paper:
 ```
 
 ## Help
-If you have any questions regarding our code or the paper, you can contact [Alireza Farshin](https://www.kth.se/profile/changjie) (changjie at kth.se) and/or [Mariano Scazzariello](https://www.kth.se/profile/marianos) (marianos at kth.se).
+If you have any questions regarding our code or the paper, you can contact [Changjie Wang](https://www.kth.se/profile/changjie) (changjie at kth.se) and/or [Mariano Scazzariello](https://www.kth.se/profile/marianos) (marianos at kth.se).
