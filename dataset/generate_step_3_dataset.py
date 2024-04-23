@@ -601,7 +601,7 @@ def main(args: argparse.Namespace) -> None:
 
             result_row = {
                 'scenario_name': name,
-                'input': combined_human_prompt,
+                'prompt': combined_human_prompt,
                 'result': json.dumps(formatted_expected),
             }
 

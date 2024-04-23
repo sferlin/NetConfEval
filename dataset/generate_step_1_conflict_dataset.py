@@ -6,6 +6,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from netconfeval.common.utils import *
+from netconfeval.prompts.step_1_conflict_detection import FUNCTION_PROMPT
 
 policies_to_batch_sizes = {
     "reachability": [1, 2, 5, 10, 20, 25, 50, 100],
@@ -72,7 +73,8 @@ def main(args: argparse.Namespace) -> None:
                             'n_policy_types': n_policy_types,
                             'max_n_requirements': max_n_requirements,
                             'conflict_exist': flag_conflict,
-                            'human_language': convert_to_human_language(sample),
+                            'description': FUNCTION_PROMPT,
+                            'human_language': "\n".join(convert_to_human_language(sample)),
                             'expected': json.dumps(transform_sample_to_expected(sample))
                         }
 

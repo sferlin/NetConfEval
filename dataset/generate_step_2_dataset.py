@@ -100,7 +100,7 @@ def main(args: argparse.Namespace) -> None:
                 result_row = {
                     'prompts': prompts,
                     'policy': policy,
-                    'input': combined_human_prompt.replace('{{', '{').replace('}}', '}'),
+                    'prompt': combined_human_prompt.replace('{{', '{').replace('}}', '}'),
                     'tests': json.dumps(test_cases_files)
                 }
 

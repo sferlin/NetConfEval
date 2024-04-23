@@ -54,7 +54,7 @@ The result will be saved in `datasets/step_2_code_gen.jsonl` by default. You can
 
 The dataset contains both the input user prompt (without preliminary system prompts) in the `input` column and a series of test cases to run on the generated code in the `tests` column.
 
-To run the tests, you need to JSON decode the `tests` folder. This will give you a dict with an incremental index as key and the test body as value.
+To run the tests, you need to JSON decode the `tests` field. This will give you a dict with an incremental index as key and the test body as value.
 It is recommended to run the tests in order, following the index key. You need the `pytest` package to run the tests. 
 
 After extracting the test body:

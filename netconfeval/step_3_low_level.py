@@ -821,14 +821,22 @@ def main(args: argparse.Namespace) -> None:
                         ("human", NETWORK_DESCRIPTION_USER),
                         ("human", "{goal}"),
                         ("system", DOCS_STR),
-                        ("system", OUTPUT_FORMAT)
+                        ("system", OUTPUT_FORMAT),
+                        ("system", ASK_FOR_OUTPUT),
                     ]
                 elif args.mode == "none":
-                    messages.extend([("system", OUTPUT_FORMAT)])
+                    messages.extend([
+                        ("system", OUTPUT_FORMAT),
+                        ("system", ASK_FOR_OUTPUT),
+                    ])
 
                     llm_call_args = {"topology": topology, "goal": goal_text}
                 elif args.mode == "full":
-                    messages.extend([("system", DOCS_STR), ("system", OUTPUT_FORMAT)])
+                    messages.extend([
+                        ("system", DOCS_STR),
+                        ("system", OUTPUT_FORMAT),
+                        ("system", ASK_FOR_OUTPUT),
+                    ])
 
                     docs_text = text_from_pdf(os.path.join(assets_path, "full-docs-shrink.pdf"))
 
@@ -844,7 +852,11 @@ def main(args: argparse.Namespace) -> None:
 
                     relevant_docs_str = "\n".join([d.page_content for d in relevant_docs_and_score])
 
-                    messages.extend([("system", DOCS_STR), ("system", OUTPUT_FORMAT)])
+                    messages.extend([
+                        ("system", DOCS_STR),
+                        ("system", OUTPUT_FORMAT),
+                        ("system", ASK_FOR_OUTPUT),
+                    ])
                     llm_call_args = {"topology": topology, "docs": relevant_docs_str, "goal": goal_text}
 
                 prompt_template = ChatPromptTemplate.from_messages(messages)

@@ -47,11 +47,7 @@ To translate a few requirements into multiple function calls (```add_reachabilit
 python3 step_1_function_call.py --n_runs 1 --model gpt-4-1106 --policy_types reachability waypoint loadbalancing --batch_size 3
 ```
 
-<<<<<<< Updated upstream
-**Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we cusotimize the input prompt to evaluate ad-hoc function calling. 
-=======
-**Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we cusotimize the input prompt to evaluate ad-hoc function calling.
->>>>>>> Stashed changes
+**Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we customize the input prompt to evaluate ad-hoc function calling.
 
 To run the experiment:
 
@@ -83,9 +79,10 @@ python3 step_3_low_level.py --n_runs 1 --model gpt-4-turbo --mode rag --rag_chun
 
 The experiment results will be stored in the directory named `results_low_level` by default.
 
-## Supporting New Models
-You can add new models in the `netconfeval/common/model_configs.py` file.
-We currently support OpenAI models (`'type': 'openai'`) and HuggingFace models (`'type': 'HF'`).
+## Support for New Models
+We rely on LangChain to provide a common interface to access different model APIs.
+You can add new supported models in the `netconfeval/common/model_configs.py` file.
+We currently support OpenAI models (`'type': 'openai'`) and HuggingFace models (`'type': 'HF'`) through a custom LangChain-compatible class (`netconfeval/foundation/langchain/hf.py`).
 
 To add a model, just add a new Dict element to the `model_configurations` Dict, by providing a unique key for it.
 The new model key is then automatically visible using the `--model` command line parameter of the `.py` tests of the benchmarks.
@@ -134,7 +131,7 @@ model_configurations = {
     'llama3-8b-instruct': {
         'type': 'HF',
         'model_name': 'meta-llama/Meta-Llama-3-8B-Instruct',
-        'prompt_builder': _build_llama3_prompt, # Implement it
+        'prompt_builder': _build_llama3_prompt, # Implement the function
         'max_length': 4096,
         'use_quantization': False
     }
@@ -144,32 +141,29 @@ model_configurations = {
 ### Adding new model types
 Aside from adding OpenAI and HuggingFace models, it is also possible to add new model types (for example Gemini by Google).
 
-We will continuously improve support for different APIs, but if you want to add it:
-- Declare a new `type`;
-- Go in each `step_*.py` file in `netconfeval/` folder;
-- Add specific model loading in the benchmark (search for `model_configurations` and you will see where this is done).
+We will continuously improve support for different APIs, but if you want to contribute:
+- Define a new `type`, coherent with the model types (e.g., `google` for Google models);
+- Modify each `step_*.py` file in `netconfeval/` folder and add specific model loading in the benchmark (search for `model_configurations` and you will see where this is done).
 
 ## Citing our paper
 If you use NetConfEval, please cite our paper:
 
 ```bibtex
 @article{netconfeval,
-author = {Wang, Chanjie and Scazzariello, Mariano and Farshin, Alireza and Ferlin, Simone and Kosti\'{c}, Dejan and Chiesa, Marco},
-title = {NetConfEval: Can LLMs Facilitate Network Configuration?},
-year = {2024},
-issue_date = {December 2024},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {2},
-number = {CoNEXT2},
-url = {https://doi.org/10.1145/3656296},
-doi = {10.1145/3656296},
-abstract = {This paper explores opportunities to utilize Large Language Models (LLMs) to make network configuration human-friendly, simplifying the configuration of network devices & development of routing algorithms and minimizing errors. We design a set of benchmarks (NetConfEval) to examine the effectiveness of different models in facilitating and automating network configuration. More specifically, we focus on the scenarios where LLMs translate high-level policies, requirements, and descriptions (i.e., specified in natural language) into low-level network configurations & Python code. NetConfEval considers four tasks that could potentially facilitate network configuration, such as (𝑖) generating high-level requirements into a formal specification format, (𝑖𝑖) generating API/function calls from high-level requirements, (𝑖𝑖𝑖) developing routing algorithms based on high-level descriptions, and (𝑖𝑣) generating low-level configuration for existing and new protocols based on input documentation. Learning from the results of our study, we propose a set of principles to design LLM-based systems to configure networks. Finally, we present two GPT-4-based prototypes to (𝑖) automatically configure P4-enabled devices from a set of high-level requirements and (𝑖𝑖) integrate LLMs into existing network synthesizers.},
-journal = {Proc. ACM Netw.},
-month = {june},
-articleno = {},
-numpages = {25},
-keywords = {ASIC switches, cuckoo hashing, flowlet routing, programmable switches, stateful NFs}
+    author = {Wang, Chanjie and Scazzariello, Mariano and Farshin, Alireza and Ferlin, Simone and Kosti\'{c}, Dejan and Chiesa, Marco},
+    title = {NetConfEval: Can LLMs Facilitate Network Configuration?},
+    year = {2024},
+    issue_date = {December 2024},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {2},
+    number = {CoNEXT2},
+    url = {https://doi.org/10.1145/3656296},
+    doi = {10.1145/3656296},
+    journal = {Proc. ACM Netw.},
+    month = {june},
+    articleno = {},
+    numpages = {25},
 }
 ```
 

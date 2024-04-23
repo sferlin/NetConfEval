@@ -24,8 +24,9 @@ DOCS_STR = "Here's the relevant documentation.\n\n{docs}"
 OUTPUT_FORMAT = """Give the user the configurations of all the devices.
 If you do not know a required value, leave the following placeholder: [PLACEHOLDER].
 If a value is optional, do not include anything in the output.
-If a chunk of configuration is optional, do not include anything in the output.
-Include the configurations in the "result" field of the JSON. Format them in a map with the following format:
+If a chunk of configuration is optional, do not include anything in the output."""
+
+ASK_FOR_OUTPUT = """Include the configurations in the "result" field of the JSON. Format them in a map with the following format:
 "result": {{
     "<DEVICE_NAME>": "<CONFIGURATION LINES>"
 }}"""
