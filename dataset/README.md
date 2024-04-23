@@ -1,5 +1,5 @@
 # HuggingFace Dataset Scripts
-This folder contains four scripts to generate the `jsonl` datasets that are currently released on [HuggingFace](https://huggingface.co/datasets/cjwangee/NetConfEval).
+This folder contains four scripts to generate the `jsonl` datasets that are currently released on [HuggingFace](https://huggingface.co/datasets/NetConfEval/NetConfEval).
 
 By default, the scripts will generate the same dataset as the ones used by the evaluation scripts in the `netconfeval` folder.
 

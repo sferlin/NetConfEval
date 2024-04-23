@@ -4,7 +4,7 @@
 
 We present a set of benchmarks (NetConfEval) to examine the effectiveness of different models in facilitating and automating network configuration described in our paper "[NetConfEval: Can LLMs Facilitate Network Configuration?](https://doi.org/10.1145/3656296)".
 
-[Paper](https://doi.org/10.1145/3656296) - [🤗 Hugging Face Dataset](https://huggingface.co/datasets/NetConfEval/NetConfEval)
+[📜 Paper](https://doi.org/10.1145/3656296) - [🤗 Hugging Face Dataset](https://huggingface.co/datasets/NetConfEval/NetConfEval)
 
 ## Installation
 Make sure to use Python 3.10 or later. Install this repository and install all the packages.
@@ -47,7 +47,11 @@ To translate a few requirements into multiple function calls (```add_reachabilit
 python3 step_1_function_call.py --n_runs 1 --model gpt-4-1106 --policy_types reachability waypoint loadbalancing --batch_size 3
 ```
 
+<<<<<<< Updated upstream
 **Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we cusotimize the input prompt to evaluate ad-hoc function calling. 
+=======
+**Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we cusotimize the input prompt to evaluate ad-hoc function calling.
+>>>>>>> Stashed changes
 
 To run the experiment:
 
