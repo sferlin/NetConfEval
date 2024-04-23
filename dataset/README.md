@@ -1,5 +1,5 @@
 # HuggingFace Dataset Scripts
-This folder contains four scripts to generate the `jsonl` datasets that are currently released on HuggingFace.
+This folder contains four scripts to generate the `jsonl` datasets that are currently released on [HuggingFace](https://huggingface.co/datasets/cjwangee/NetConfEval).
 
 By default, the scripts will generate the same dataset as the ones used by the evaluation scripts in the `netconfeval` folder.
 
@@ -8,7 +8,7 @@ You can customize the generation by modifying the scripts.
 ## Usage
 To use the scripts, the Python packages: `sortedcontainers`, `pytest`, `kathara`, and `docker` are required.
 
-### From High-Level Requirements to a Formal Specification
+### Translating High-Level Requirements to a Formal Specification Format
 This script will generate the dataset that can be used to evaluate `step_1_formal_spec_translation.py` and `step_1_function_call.py`.
 
 Run the following command:
