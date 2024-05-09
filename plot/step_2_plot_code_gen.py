@@ -1,45 +1,41 @@
 import argparse
-import csv
-import glob
 import os
-import re
 import statistics
 import sys
 
 import matplotlib
-import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-file2plot = [
-    {
+from extractor.data_extractor import step_2_code_gen_extract
+from netconfeval.common.model_configs import model_configurations
+
+types2plot = {
+    "basic-with_feedback": {
+        "label": "w/ Instruction w/ Feedback",
         "edgecolor": "#e41a1c",
         "hatch": "/////"
     },
-    {
+    "basic-without_feedback": {
+        "label": "w/ Instruction w/o Feedback",
         "edgecolor": "#377eb8",
         "hatch": "\\\\\\\\\\"
     },
-    {
+    "no_detail-with_feedback": {
+        "label": "w/o Instruction w/ Feedback",
         "edgecolor": "#4daf4a",
         "hatch": "----"
     },
-    {
+    "no_detail-without_feedback": {
+        "label": "w/o Instruction w/o Feedback",
         "edgecolor": "#984ea3",
         "hatch": "xxxx"
     },
-    {
-        "edgecolor": "magenta",
-        "hatch": "."
-    },
-    {
-        "edgecolor": "cyan",
-        "hatch": "o"
-    }
-]
+}
 
-key2xlabel = {
+x_labels = {
     "shortest_path": "Shortest Path",
     "reachability": "Reachability",
     "waypoint": "Waypoint",
@@ -47,172 +43,126 @@ key2xlabel = {
 }
 
 
-def extract_result(file):
-    print(file)
-    average = {}
+def _plot(results_path: str, figures_path: str, model: str) -> None:
+    results = {}
+    for prompt in ["basic", "no_detail"]:
+        for feedback in ["with_feedback", "without_feedback"]:
+            results[f"{prompt}-{feedback}"] = step_2_code_gen_extract(results_path, prompt, feedback, model)
 
-    with open(os.path.join(file), 'r') as f:
-        reader = csv.DictReader(f)
-        for res in reader:
-            if res["policy"]:
-                policy = res["policy"]
-                if policy not in average:
-                    average[policy] = {}
-                    average[policy]["time"] = []
-                    average[policy]["feedback_num"] = []
-                    average[policy]["format_error_num"] = []
-                    average[policy]["syntax_error_num"] = []
-                    average[policy]["test_error_num"] = []
-                    average[policy]["total_cost"] = []
-
-                average[policy]["time"].append(float(res["time"]))
-                average[policy]["feedback_num"].append(float(res["feedback_num"]))
-                average[policy]["format_error_num"].append(float(res["format_error_num"]))
-                average[policy]["syntax_error_num"].append(float(res["syntax_error_num"]))
-                average[policy]["test_error_num"].append(float(res["test_error_num"]))
-                average[policy]["total_cost"].append(float(res["total_cost"]) if "total_cost" in res else 0)
-
-    result = {}
-
-    # print("policy\t\t\t", "time\t\t", "feedback\t", "failure\t", "cost")
-    for policy, avg in average.items():
-        result[policy] = {}
-        result[policy]["average_time"] = statistics.mean(avg["time"])
-        result[policy]["max_time"] = max(avg["time"])
-        result[policy]["min_time"] = min(avg["time"])
-        result[policy]["average_feedback"] = statistics.mean(avg["feedback_num"])
-        result[policy]["max_feedback"] = max(avg["feedback_num"])
-        result[policy]["min_feedback"] = min(avg["feedback_num"])
-        result[policy]["average_success"] = statistics.mean([i < 10 for i in avg["feedback_num"]])
-        result[policy]["average_cost"] = statistics.mean(avg["total_cost"])
-        result[policy]["max_cost"] = max(avg["total_cost"])
-        result[policy]["min_cost"] = min(avg["total_cost"])
-
-    return result
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--results_path', type=str, required=False, default="result")
-    parser.add_argument('--figures_path', type=str, required=True)
-
-    return parser.parse_args()
-
-
-def main(args: argparse.Namespace):
-    files = []
-
-    print(os.path.join(args.results_path, f"code-gpt-4-*.csv"))
-
-    results_files_list = glob.glob(os.path.join('../', args.results_path, f"code-gpt-4-*.csv"))
-
-    # print(results_files_list)
-    # exit()
-
-    for file in results_files_list:
-
-        res = extract_result(file)
-        if "basic-with_feedback" in file:
-            label = "w/ Instruction w/ Feedback"
-        elif "basic-without_feedback" in file:
-            label = "w/ Instruction w/o Feedback"
-        elif "no_detail-with_feedback" in file:
-            label = "w/o Instruction w/ Feedback"
-        elif "no_detail-without_feedback" in file:
-            label = "w/o Instruction w/o Feedback"
-
-        # match = re.match(".*-(gpt-4-.*)-1.*\.csv", file)
-        # name = match.group(1)
-        # label = ""
-        # if name == "gpt-4-turbo-basic" or name == "gpt-4-basic":
-        #     label = "w/ Instruction w/ Feedback"
-        # elif name == "gpt-4-turbo-basic-without_feedback" or name == "gpt-4-without_feedback":
-        #     label = "w/ Instruction w/o Feedback"
-        # elif name == "gpt-4-turbo-without_detail" or name == "gpt-4-without_detail":
-        #     label = "w/o Instruction w/ Feedback"
-        # elif name == "gpt-4-turbo-without_detail-without_feedback" or name == "gpt-4-without_detail_without_feedback":
-        #     label = "w/o Instruction w/o Feedback"
-        files.append({"legend": label, "res": res})
-
-    files.sort(key=lambda x: len(x["legend"]), reverse=True)
-
-    bar_nums = len(files)
-    labels_basic = list(files[0]["res"].keys())
-
-    for i in range(1, bar_nums):
-        labels_basic = [val for val in list(files[i]["res"].keys()) if val in labels_basic]
-
-    x = np.arange(len(labels_basic))
     plt.clf()
     figure, axis = plt.subplots(1, 3, sharex=True, figsize=(12, 3))
     figure.text(0.5, -0.03, 'Policy', ha='center')
 
-
     plt.sca(axis[0])
+    x_ticks = None
+    for x, (exp_type, res) in enumerate(results.items()):
+        type_config = types2plot[exp_type]
+        bar_nums = len(res)
 
-    for i in range(0, bar_nums):
-        file = files[i]
-        success_rates = [file["res"][label]["average_success"] for label in labels_basic]
+        if x_ticks is None:
+            x_ticks = res.keys()
 
-        plt.bar(x + 0.1 * (i - bar_nums / 2), success_rates, label=file["legend"], color="white",
-                edgecolor=file2plot[i]["edgecolor"],
-                hatch=file2plot[i]["hatch"], width=0.1)
+        for idx, data in enumerate(res.values()):
+            avg_succ = statistics.mean([i < 10 for i in data["feedback_num"]])
+            plt.bar(
+                idx + 0.1 * (x - bar_nums / 2), avg_succ, label=type_config["label"], color="white",
+                edgecolor=type_config["edgecolor"], hatch=type_config["hatch"], width=0.1
+            )
 
-    plt.xticks(range(0, len(labels_basic)), labels=[key2xlabel[val] for val in labels_basic], fontsize=8)
+    plt.xticks(range(0, len(x_ticks)), labels=[x_labels[val] for val in x_ticks], fontsize=8)
     plt.ylabel("Success Rate [%]")
-    figure.legend(loc="upper center", labelspacing=0.1, ncol=2, bbox_to_anchor=(0.5, 1.13))
+
     ax = plt.gca()
     ax.set_axisbelow(True)
     plt.grid(True, axis="y")
 
-    os.makedirs(args.figures_path, exist_ok=True)
-
     plt.sca(axis[1])
-    for i in range(0, bar_nums):
-        file = files[i]
-        avg_feedbacks = [file["res"][label]["average_feedback"] for label in labels_basic]
-        max_feedbacks = [file["res"][label]["max_feedback"] for label in labels_basic]
-        min_feedbacks = [file["res"][label]["min_feedback"] for label in labels_basic]
+    x_ticks = None
+    for x, (exp_type, res) in enumerate(results.items()):
+        type_config = types2plot[exp_type]
+        bar_nums = len(res)
 
-        plt.bar(x + 0.1 * (i - bar_nums / 2), avg_feedbacks, label=file["legend"], color="white",
-                edgecolor=file2plot[i]["edgecolor"],
-                hatch=file2plot[i]["hatch"], width=0.1)
+        if x_ticks is None:
+            x_ticks = res.keys()
 
-    plt.xticks(range(0, len(labels_basic)), labels=[key2xlabel[val] for val in labels_basic], fontsize=8)
+        for idx, data in enumerate(res.values()):
+            avg_feedback = statistics.mean(data["feedback_num"])
+            plt.bar(
+                idx + 0.1 * (x - bar_nums / 2), avg_feedback, label=type_config["label"], color="white",
+                edgecolor=type_config["edgecolor"], hatch=type_config["hatch"], width=0.1
+            )
+
+    plt.xticks(range(0, len(x_ticks)), labels=[x_labels[val] for val in x_ticks], fontsize=8)
     plt.ylabel("N. Attempts")
     plt.ylim(0, 11)
+
     ax = plt.gca()
     ax.set_axisbelow(True)
     plt.grid(True, axis="y")
 
     plt.sca(axis[2])
-    for i in range(0, bar_nums):
-        file = files[i]
-        avg_costs = [file["res"][label]["average_cost"] for label in labels_basic]
-        max_costs = [file["res"][label]["max_cost"] for label in labels_basic]
-        min_costs = [file["res"][label]["min_cost"] for label in labels_basic]
+    x_ticks = None
+    for x, (exp_type, res) in enumerate(results.items()):
+        type_config = types2plot[exp_type]
+        bar_nums = len(res)
 
-        plt.bar(x + 0.1 * (i - bar_nums / 2), avg_costs, label=file["legend"], color="white",
-                edgecolor=file2plot[i]["edgecolor"],
-                hatch=file2plot[i]["hatch"], width=0.1)
-    plt.xticks(range(0, len(labels_basic)), labels=[key2xlabel[val] for val in labels_basic], fontsize=8)
+        if x_ticks is None:
+            x_ticks = res.keys()
+
+        for idx, data in enumerate(res.values()):
+            avg_cost = statistics.mean(data["total_cost"])
+            plt.bar(
+                idx + 0.1 * (x - bar_nums / 2), avg_cost, label=type_config["label"], color="white",
+                edgecolor=type_config["edgecolor"], hatch=type_config["hatch"], width=0.1
+            )
+
+    plt.xticks(range(0, len(x_ticks)), labels=[x_labels[val] for val in x_ticks], fontsize=8)
     plt.ylabel("Cost [$]")
     plt.ylim(0, 0.70)
+
     ax = plt.gca()
     ax.set_axisbelow(True)
     plt.grid(True, axis="y")
-
     figure.tight_layout()
 
-    figure.savefig(os.path.join(args.figures_path, f"figure-step2-gpt4.pdf"),
-                format="pdf",
-                bbox_inches='tight')
+    legend_patches = []
+    for type_config in types2plot.values():
+        legend_patches.append(
+            mpatches.Patch(
+                facecolor="white", edgecolor=type_config["edgecolor"], hatch=type_config["hatch"],
+                label=type_config["label"]
+            )
+        )
+
+    figure.legend(
+        loc="upper center", handles=legend_patches,
+        labelspacing=0.1, ncol=2, bbox_to_anchor=(0.5, 1.13)
+    )
+    figure.savefig(
+        os.path.join(figures_path, f"step_2_code_gen-{model}.pdf"),
+        format="pdf", bbox_inches='tight'
+    )
 
 
-if __name__ == "__main__":
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--results_path', type=str, required=False, default="results_code_gen")
+    parser.add_argument('--figures_path', type=str, required=True)
+    parser.add_argument('--model', choices=list(model_configurations.keys()), required=True)
+
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace):
     matplotlib.rc('font', size=10)
     matplotlib.rcParams['hatch.linewidth'] = 0.3
     matplotlib.rcParams['pdf.fonttype'] = 42
     matplotlib.rcParams['ps.fonttype'] = 42
 
+    os.makedirs(args.figures_path, exist_ok=True)
+
+    _plot(args.results_path, args.figures_path, args.model)
+
+
+if __name__ == "__main__":
     main(parse_args())

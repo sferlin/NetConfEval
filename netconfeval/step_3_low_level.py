@@ -20,12 +20,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.callbacks import get_openai_callback
 from langchain_community.document_loaders import PDFMinerLoader
 from langchain_community.vectorstores import Chroma
-from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from netconfeval.common.model_configs import model_configurations
+from netconfeval.common.model_configs import model_configurations, get_model_instance
 from netconfeval.foundation.step.chain_step import ChainStep
 from netconfeval.prompts.step_3_low_level import *
 
@@ -671,11 +670,11 @@ def main(args: argparse.Namespace) -> None:
 
     os.makedirs(args.results_path, exist_ok=True)
 
-    rag_lbl = f'-rag_{args.rag_chunk_size}'
+    rag_lbl = f'_{args.rag_chunk_size}'
     results_time = time.strftime("%Y%m%d-%H%M%S")
     file_handler = logging.FileHandler(
         os.path.abspath(
-            os.path.join(args.results_path, f"log-{args.model}-{results_time}-{args.mode}{rag_lbl}.log")
+            os.path.join(args.results_path, f"log-{args.model}-{args.mode}{rag_lbl}-{results_time}.log")
         )
     )
     file_handler.setFormatter(logging.Formatter('%(message)s'))
@@ -704,20 +703,14 @@ def main(args: argparse.Namespace) -> None:
         chunks = text_splitter.split_documents(documents)
         db = Chroma.from_documents(chunks, OpenAIEmbeddings())
 
-    if model_configurations[args.model]['type'] == 'openai':
-        llm = ChatOpenAI(
-            model_name=model_configurations[args.model]['model_name'],
-            model_kwargs=model_configurations[args.model]['args'],
-        )
-    else:
-        raise Exception(f"Type `{model_configurations[args.model]['type']}` for model `{args.model}` not supported!")
+    llm = get_model_instance(args.model)
 
     # Start the Kathara machine with FRRouting
     frr_device = start_container()
 
     w = None
 
-    filename = f"result-{args.model}-{results_time}-{args.mode}{rag_lbl}.csv"
+    filename = f"result-{args.model}-{args.mode}{rag_lbl}-{results_time}.csv"
     with (open(os.path.join(args.results_path, filename), 'w') as f):
         for it in range(0, args.n_runs):
             logging.info(f"Performing iteration n. {it + 1}...")

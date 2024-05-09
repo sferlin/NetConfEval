@@ -6,11 +6,10 @@ import time
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.callbacks import get_openai_callback
-from langchain_openai import ChatOpenAI
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from netconfeval.common.model_configs import model_configurations
+from netconfeval.common.model_configs import model_configurations, get_model_instance
 from netconfeval.common.utils import *
 from netconfeval.formatters.formatters import step_2_input_formatter, step_2_output_formatter
 from netconfeval.foundation.langchain.memory.conversation_latest_memory import ConversationLatestMemory
@@ -67,7 +66,7 @@ def main(args: argparse.Namespace) -> None:
         os.path.abspath(
             os.path.join(
                 args.results_path,
-                f"log-code-{args.model}-{'_'.join(args.policy_types)}-{args.prompts}-{'without_feedback' if not with_feedback else 'with_feedback'}-{results_time}.log"
+                f"log-{args.model}-{'_'.join(args.policy_types)}-{args.prompts}-{'without_feedback' if not with_feedback else 'with_feedback'}-{results_time}.log"
             )
         )
     )
@@ -76,28 +75,13 @@ def main(args: argparse.Namespace) -> None:
     file_handler.setLevel(logging.WARNING)
     logging.root.addHandler(file_handler)
 
-    if model_configurations[args.model]['type'] == 'HF':
-        from netconfeval.foundation.langchain.chat_models.hf import ChatHF
-
-        llm_step_2 = ChatHF(
-            model_name=model_configurations[args.model]['model_name'],
-            max_length=model_configurations[args.model]['max_length'],
-            use_quantization=model_configurations[args.model]['use_quantization'],
-            prompt_func=model_configurations[args.model]['prompt_builder'],
-        )
-    elif model_configurations[args.model]['type'] == 'openai':
-        llm_step_2 = ChatOpenAI(
-            model_name=model_configurations[args.model]['model_name'],
-            model_kwargs=model_configurations[args.model]['args'],
-        )
-    else:
-        raise Exception(f"Type `{model_configurations[args.model]['type']}` for Model `{args.model}` not supported!")
+    llm_step_2 = get_model_instance(args.model)
 
     w = None
 
     code_base_assets_path = os.path.abspath(os.path.join('..', 'assets', 'step_2_code_base'))
     tests_assets_path = os.path.abspath(os.path.join('..', 'assets', 'step_2_tests'))
-    filename = f"code-{args.model}-{'_'.join(args.policy_types)}-{args.prompts}-{'without_feedback' if not with_feedback else 'with_feedback'}-{results_time}.csv"
+    filename = f"result-{args.model}-{'_'.join(args.policy_types)}-{args.prompts}-{'without_feedback' if not with_feedback else 'with_feedback'}-{results_time}.csv"
     with open(os.path.join(args.results_path, filename), 'w') as f:
         for it in range(0, args.n_runs):
             for policy in args.policy_types:

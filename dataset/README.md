@@ -24,6 +24,17 @@ By default, the script will generate a dataset with five iterations, if you want
 
 You can find the policies and the associated batch sizes in the file, under the `policies_to_batch_sizes` Dict. You can change it as required.
 
+#### Dataset Format
+Each line of the output `.jsonl` file contains the following fields:
+- `iteration`: incremental index of the iteration (set using the `--n_runs` argument)
+- `max_n_requirements`: number of total requirements in the dataset
+- `chunk`: the batch identifier when chunking the total requirements
+- `batch_size`: number of requirements in a batch
+- `n_policy_types`: total number of policy types: (e.g., `2` if `reachability` and `waypoint` are used)
+- `description`: textual description of the supported requirements, can be used as system prompt
+- `human_language`: the input specifications in human language
+- `expected`: the expected JSON data structure translated from the `human_language`
+
 ### Conflict Detection
 This script will generate the dataset that can be used to evaluate `step_1_formal_spec_conflict_detection.py`.
 It will insert a "simple conflict" in each even batch (0, 2, ...).
@@ -41,6 +52,17 @@ By default, the script will generate a dataset with five iterations, if you want
 
 You can find the policies and the associated batch sizes in the file, under the `policies_to_batch_sizes` Dict. You can change it as required.
 
+#### Dataset Format
+Each line of the output `.jsonl` file contains the following fields:
+- `iteration`: incremental index of the iteration (set using the `--n_runs` argument)
+- `max_n_requirements`: number of total requirements in the dataset
+- `chunk`: the batch identifier when chunking the total requirements
+- `batch_size`: number of requirements in a batch
+- `n_policy_types`: total number of policy types: (e.g., `2` if `reachability` and `waypoint` are used)
+- `conflict_exists`: a boolean indicating whether the conflict is present in the requirements
+- `description`: textual description of the supported requirements, can be used as system prompt
+- `human_language`: the input specifications in human language
+- `expected`: the expected JSON data structure translated from the `human_language`
 
 ### Developing Routing Algorithms
 This script will generate the dataset that can be used to evaluate `step_2_code_gen.py`.
@@ -64,6 +86,13 @@ After extracting the test body:
 
 The above procedure is implemented in NetConfEval through the `netconfeval/verifiers/step_2_verifier_detailed.py` class.
 
+#### Dataset Format
+Each line of the output `.jsonl` file contains the following fields:
+- `prompts`: the type of instruction given to the model to generate the code, can be `basic` or `no_detail`
+- `policy`: the type of policy that the generated function should implement, can be `shortest_path`, `reachability`, `waypoint` or `loadbalancing`
+- `prompt`: the human textual instructions fed to the model to generate code
+- `tests`: test cases (to run using `pytest`) to verify code correctness
+
 ### Generating Low-level Configurations
 This script will generate the dataset that can be used to evaluate `step_3_low_level.py`.
 You need the `kathara` and `docker` packages to generate the dataset.
@@ -85,3 +114,9 @@ To compare the generated LLM configuration with the expected one, we suggest to:
 - Compare the two outputs using `difflib.SequenceMatcher`.
 
 The above procedure is implemented in NetConfEval in the `netconfeval/step_3_low_level.py` script.
+
+#### Dataset Format
+Each line of the output `.jsonl` file contains the following fields:
+- `scenario_name`: the name of the network scenario for which generate configurations, can be `ospf_simple`, `ospf_multiarea`, `rip`, `bgp_simple`, or `rift`
+- `prompt`: the human textual instructions fed to the model to generate low-level configurations
+- `result`: JSON data structure with the expected configuration (value of the JSON) for each device (key of the JSON)

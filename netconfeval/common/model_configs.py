@@ -1,3 +1,6 @@
+from typing import Any
+
+
 def _build_llama2_prompt(messages):
     start_prompt = "<s>[INST] "
     end_prompt = " [/INST]"
@@ -102,6 +105,27 @@ def _build_mistral_lite_prompt(messages):
     prompt = start_prompt + ' '.join(conversation) + end_prompt
 
     return prompt
+
+
+def get_model_instance(model_name: str) -> Any:
+    if model_configurations[model_name]['type'] == 'HF':
+        from netconfeval.foundation.langchain.chat_models.hf import ChatHF
+
+        return ChatHF(
+            model_name=model_configurations[model_name]['model_name'],
+            max_length=model_configurations[model_name]['max_length'],
+            use_quantization=model_configurations[model_name]['use_quantization'],
+            prompt_func=model_configurations[model_name]['prompt_builder'],
+        )
+    elif model_configurations[model_name]['type'] == 'openai':
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model_name=model_configurations[model_name]['model_name'],
+            model_kwargs=model_configurations[model_name]['args'],
+        )
+    else:
+        raise Exception(f"Type `{model_configurations[model_name]['type']}` for model `{model_name}` not supported!")
 
 
 model_configurations = {

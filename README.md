@@ -143,7 +143,7 @@ Aside from adding OpenAI and HuggingFace models, it is also possible to add new 
 
 We will continuously improve support for different APIs, but if you want to contribute:
 - Define a new `type`, coherent with the model types (e.g., `google` for Google models);
-- Modify each `step_*.py` file in `netconfeval/` folder and add specific model loading in the benchmark (search for `model_configurations` and you will see where this is done).
+- Modify the `get_model_instance` function in `netconfeval/common/model_configs.py` and add specific model loading.
 
 ## Citing our paper
 If you use NetConfEval, please cite our paper:

@@ -1,236 +1,119 @@
 import argparse
-import csv
-import glob
 import os
 import statistics
 import sys
 
-import matplotlib.ticker
-
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-
+import matplotlib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from sortedcontainers import SortedSet
-# TODO: change the location of "combined" in experiments
-# TODO: add model_selection
 
-def strtobool(val: str) -> bool:
-    """Convert a string representation of truth to true or false.
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-    Args:
-        val (str): The value to convert. True values are 'y', 'yes', 't', 'true', 'on', and '1';
-            false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+from extractor.data_extractor import step_1_conflict_detection_extract
 
-        Returns:
-            bool: The value converted to bool.
 
-        Raises:
-            ValueError: If the specified value is not a valid representation of truth.
-    """
-    val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
-        return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-        return False
+def _plot(results_path: str, figures_path: str, is_combined: bool, requirements: SortedSet, metric: str) -> None:
+    if not is_combined:
+        model2plot = {
+            "gpt-4-1106": {
+                "label": "GPT-4-Turbo",
+                "color": "#377eb8",
+                "marker": "o"
+            },
+            "gpt-4": {
+                "label": "GPT-4",
+                "color": "#a65628",
+                "marker": "s"
+            },
+            "gpt-3.5-0613": {
+                "label": "GPT-3.5-Turbo",
+                "color": "#984ea3",
+                "marker": ">"
+            }
+        }
     else:
-        raise ValueError(f"Invalid truth value `{val}`.")
+        model2plot = {
+            "gpt-4": {
+                "label": "GPT-4",
+                "color": "#a65628",
+                "marker": "s"
+            },
+            "gpt-4-1106-combined": {
+                "label": "GPT-4 (Combined)",
+                "color": "#984ea3",
+                "marker": "<"
+            },
+        }
 
-
-model2plot = {
-    "gpt-4-1106": {
-        "label": "GPT-4-Turbo",
-        "color": "#377eb8",
-        "marker": "o"
-    },
-    "gpt-4-": {
-        "label": "GPT-4",
-        "color": "#a65628",
-        "marker": "s"
-    },
-    "gpt-3.5-0613": {
-        "label": "GPT-3.5-Turbo",
-        "color": "#984ea3",
-        "marker": ">"
-    },
-    # "gpt-4-turbo-function": {
-    #     "label": "gpt-4-turbo-function",
-    #     "color": "#e41a1c",
-    #     "marker": "1"
-    # },
-    "gpt-4-1106-combined": {
-        "label": "GPT-4 (Combined)",
-        "color": "#984ea3",
-        "marker": "<"
-    },
-}
-
-
-def extract_result(file_path: str, batch_num: int) -> (dict, dict):
-    average = {}
-
-    with open(file_path, 'r') as file:
-        reader = csv.DictReader(file)
-        for res in reader:
-            n_req = int(res["batch_size"]) * batch_num
-            if n_req not in average:
-                average[n_req] = {
-                    "batch_size": int(res["batch_size"]),
-                    "n_policy_types": int(res["n_policy_types"]),
-                    "max_n_requirements": int(res["max_n_requirements"]),
-                    "TP": {},
-                    "FP": {},
-                    "FN": {},
-                    "TN": {},
-                }
-
-            it = int(res["iteration"])
-
-            if it not in average[n_req]["TP"]:
-                average[n_req]["TP"][it] = 0
-            if it not in average[n_req]["FN"]:
-                average[n_req]["FN"][it] = 0
-            if it not in average[n_req]["FP"]:
-                average[n_req]["FP"][it] = 0
-            if it not in average[n_req]["TN"]:
-                average[n_req]["TN"][it] = 0
-
-            if strtobool(res["conflict_exist"]):
-                if strtobool(res["conflict_detect"]):
-                    average[n_req]["TP"][it] += 1
-                else:
-                    average[n_req]["FN"][it] += 1
-            else:
-                if strtobool(res["conflict_detect"]):
-                    average[n_req]["FP"][it] += 1
-                else:
-                    average[n_req]["TN"][it] += 1
-
-    to_plot_accuracy = {"x": [], "y": [], "min_y": [], "max_y": []}
-    to_plot_precision = {"x": [], "y": [], "min_y": [], "max_y": []}
-    to_plot_recall = {"x": [], "y": [], "min_y": [], "max_y": []}
-    to_plot_f1_score = {"x": [], "y": [], "min_y": [], "max_y": []}
-
-    for n_req, avg in average.items():
-        it_acc = []
-        it_pre = []
-        it_rec = []
-        it_f1 = []
-        for n_run in avg['TP'].keys():
-            # print(avg["TP"][n_run], avg["TN"][n_run], avg["FP"][n_run], avg["FN"][n_run])
-            accuracy = ((avg["TP"][n_run] + avg["TN"][n_run]) /
-                        (avg["TP"][n_run] + avg["TN"][n_run] + avg["FP"][n_run] + avg["FN"][n_run])
-                        )
-            if (avg["TP"][n_run] + avg["FP"][n_run]) == 0:
-                precision = 1
-            else:
-                precision = avg["TP"][n_run] / (avg["TP"][n_run] + avg["FP"][n_run])
-
-            if (avg["TP"][n_run] + avg["FN"][n_run]) == 0:
-                recall = 1
-            else:
-                recall = avg["TP"][n_run] / (avg["TP"][n_run] + avg["FN"][n_run])
-
-            print(n_req, n_run, precision, recall, accuracy)
-            if precision + recall == 0:
-                f1_score = 1
-            else:
-                f1_score = (2 * precision * recall) / (precision + recall)
-            it_acc.append(accuracy)
-            it_pre.append(precision)
-            it_rec.append(recall)
-            it_f1.append(f1_score)
-
-        to_plot_accuracy["x"].append(n_req)
-        to_plot_accuracy["y"].append(statistics.mean(it_acc))
-        to_plot_accuracy["min_y"].append(min(it_acc))
-        to_plot_accuracy["max_y"].append(max(it_acc))
-        to_plot_precision["x"].append(n_req)
-        to_plot_precision["y"].append(statistics.mean(it_pre))
-        to_plot_precision["min_y"].append(min(it_pre))
-        to_plot_precision["max_y"].append(max(it_pre))
-        to_plot_recall["x"].append(n_req)
-        to_plot_recall["y"].append(statistics.mean(it_rec))
-        to_plot_recall["min_y"].append(min(it_rec))
-        to_plot_recall["max_y"].append(max(it_rec))
-        to_plot_f1_score["x"].append(n_req)
-        to_plot_f1_score["y"].append(statistics.mean(it_f1))
-        to_plot_f1_score["min_y"].append(min(it_f1))
-        to_plot_f1_score["max_y"].append(max(it_f1))
-
-    return to_plot_accuracy, to_plot_precision, to_plot_recall, to_plot_f1_score
-
-
-def plot_by_requirements(results_path: str, figures_path: str, requirements: SortedSet) -> None:
-    model2result = {}
     requirements_str = "_".join(requirements)
 
-    model_list = model2plot.keys()
-    for model_name in model_list:
-        results_files_list = glob.glob(
-            os.path.join("../", results_path, f"result-{model_name}-{requirements_str}-conflict-*.csv"))
+    results = {}
+    for model in model2plot.keys():
+        results[model] = step_1_conflict_detection_extract(results_path, requirements, model, metric)
 
-        if len(results_files_list) == 0:
-            continue
+    ax = plt.gca()
+    x_ticks = None
+    for model, results in results.items():
+        to_plot = {"x": [], "y": [], "min_y": [], "max_y": []}
+        for n_req, res in results.items():
+            to_plot["x"].append(n_req * int(res["n_policy_types"]))
+            to_plot["y"].append(statistics.mean(res["data"]) if len(res["data"]) >= 1 else res["data"][0])
+            to_plot["min_y"].append(min(res["data"]))
+            to_plot["max_y"].append(max(res["data"]))
 
-        if results_files_list:
-            results_file = results_files_list.pop()
+        model_params = model2plot[model]
+        plt.plot(
+            to_plot["x"], to_plot["y"],
+            marker=model_params["marker"],
+            fillstyle='none',
+            linestyle='--',
+            color=model_params["color"],
+            label=model_params["label"]
+        )
 
-            if model_name not in model2result:
-                model2result[model_name] = {}
+        for idx, x in enumerate(to_plot['x']):
+            plt.errorbar(
+                x,
+                to_plot['y'][idx],
+                yerr=[[to_plot['y'][idx] - to_plot['min_y'][idx]],
+                      [to_plot['max_y'][idx] - to_plot['y'][idx]]],
+                color=model_params["color"],
+                elinewidth=1, capsize=1
+            )
 
-            print(model_name)
-            model2result[model_name]["accuracy"], model2result[model_name]["precision"], model2result[model_name][
-                "recall"], model2result[model_name]["f1_score"] = extract_result(results_file, len(requirements))
-        print(model2result[model_name]["accuracy"], model2result[model_name]["precision"],
-              model2result[model_name]["recall"], model2result[model_name]["f1_score"])
+        if x_ticks is None:
+            x_ticks = to_plot["x"]
 
-    base_figures_path = os.path.join(figures_path)
-    os.makedirs(base_figures_path, exist_ok=True)
-
-    for param in ["accuracy", "precision", "recall", "f1_score"]:
-        plt.clf()
-        ax = plt.gca()
-
-        for model, results in model2result.items():
-            model_params = model2plot[model]
-            plt.plot(results[param]["x"], results[param]["y"],
-                     marker=model_params["marker"],
-                     fillstyle='none',
-                     linestyle='--',
-                     color=model_params["color"],
-                     label=model_params["label"]
-                     )
-
-            for idx, x in enumerate(results[param]['x']):
-                plt.errorbar(
-                    x,
-                    results[param]['y'][idx],
-                    yerr=[[results[param]['y'][idx] - results[param]['min_y'][idx]],
-                          [results[param]['max_y'][idx] - results[param]['y'][idx]]],
-                    color=model_params["color"],
-                    elinewidth=1, capsize=1
-                )
-
-        plt.ylim([0, 1.2])
-        plt.yticks(np.arange(0, 1.2, 0.25))
-        plt.xscale('log', base=10)
-        plt.xticks([3, 9, 33, 99])
-        ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-        plt.legend(loc='lower left' if param == "f1_score" else "lower right", labelspacing=0.2, ncol=1, prop={'size': 8})
-        plt.xlabel('Batch Size')
-        label = "Accuracy" if param == "accuracy" else "Precision" if param == "precision" else "Recall" if param == "recall" else "F1-Score" if param == "f1_score" else "None"
-        plt.ylabel(label)
-        plt.grid(True)
-        plt.savefig(os.path.join(base_figures_path, f"conflict-{requirements_str}-{param}.pdf"),
-                    format="pdf", bbox_inches='tight')
+    plt.ylim([0, 1.2])
+    plt.yticks(np.arange(0, 1.2, 0.25))
+    plt.xscale('log', base=10)
+    plt.xticks(x_ticks)
+    ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    plt.legend(
+        loc='lower left' if metric == "f1_score" else "lower right", labelspacing=0.2, ncol=1,
+        prop={'size': 8}
+    )
+    plt.xlabel('Batch Size')
+    label = "Accuracy" if metric == "accuracy" else "Recall" if metric == "recall" else "F1-Score" if metric == "f1_score" else "None"
+    plt.ylabel(label)
+    plt.grid(True)
+    plt.savefig(
+        os.path.join(figures_path,
+                     f"step_1_detection-{requirements_str}-{metric}-{'combined' if is_combined else ''}.pdf"),
+        format="pdf", bbox_inches='tight'
+    )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--results_path', type=str, required=False, default="result")
+    parser.add_argument('--results_path', type=str, required=False, default="results_conflict_detection")
     parser.add_argument('--figures_path', type=str, required=True)
+    parser.add_argument('--combined', action='store_true', required=False)
+    parser.add_argument('--policy_types', choices=["reachability", "waypoint", "loadbalancing"],
+                        required=True, nargs='+')
+    parser.add_argument('--metric', type=str, required=True, choices=["accuracy", "recall", "f1_score"])
 
     return parser.parse_args()
 
@@ -242,9 +125,9 @@ def main(args: argparse.Namespace) -> None:
     mpl.rcParams['pdf.fonttype'] = 42
     mpl.rcParams['ps.fonttype'] = 42
 
-    plot_by_requirements(args.results_path, args.figures_path, SortedSet({"loadbalancing", "reachability", "waypoint"}))
+    os.makedirs(args.figures_path, exist_ok=True)
 
-    # plt.plot(req_bard, accuracy_bard, marker='s', fillstyle='none', linestyle='--', color='gold', label='BARD')
+    _plot(args.results_path, args.figures_path, args.combined, SortedSet(args.policy_types), args.metric)
 
 
 if __name__ == "__main__":

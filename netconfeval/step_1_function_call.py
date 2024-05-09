@@ -9,12 +9,11 @@ from json import JSONDecodeError
 from deepdiff import DeepDiff
 from langchain_community.callbacks import get_openai_callback
 from langchain_community.callbacks.openai_info import get_openai_token_cost_for_model
-from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from netconfeval.common.model_configs import model_configurations
+from netconfeval.common.model_configs import model_configurations, get_model_instance
 from netconfeval.common.utils import *
 
 
@@ -151,23 +150,7 @@ def main(args: argparse.Namespace) -> None:
 
     model_type = model_configurations[args.model]['type']
     if args.adhoc:
-        if model_type == 'HF':
-            from netconfeval.foundation.langchain.chat_models.hf import ChatHF
-
-            llm_step_1 = ChatHF(
-                model_name=model_configurations[args.model]['model_name'],
-                max_length=model_configurations[args.model]['max_length'],
-                use_quantization=model_configurations[args.model]['use_quantization'],
-                prompt_func=model_configurations[args.model]['prompt_builder'],
-            )
-        elif model_type == 'openai':
-            llm_step_1 = ChatOpenAI(
-                model_name=model_configurations[args.model]['model_name'],
-                model_kwargs=model_configurations[args.model]['args'],
-            )
-        else:
-            raise Exception(f"Type `{model_type}` "
-                            f"for model `{args.model}` not supported!")
+        llm_step_1 = get_model_instance(args.model)
     elif model_type == 'HF':
         raise Exception(f"Native function calling not supported on type `{model_type}`!")
 
