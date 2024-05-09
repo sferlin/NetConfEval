@@ -11,7 +11,7 @@ To run the whole benchmark and replicate all the experiments to produce all the 
 export OPENAI_API_KEY="YOUR OPENAI KEY"
 ```
 
-2. Create a `venv` and install the `requirements.txt`:
+2. Make sure to use Python 3.10 or later. Create a `venv` and install the `requirements.txt`:
 ``` bash
 virtualenv venv 
 source venv/bin/activate
@@ -38,4 +38,4 @@ Once the experiments are all completed, simply run the plotter script:
 ./2_plot_all.sh
 ```
 
-The script will produce all the figures of the paper.
+The script will produce all the figures of the paper in the `figures` folder.

@@ -7,7 +7,7 @@ import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 
 from extractor.data_extractor import step_3_low_level_extract
 from netconfeval.common.model_configs import model_configurations

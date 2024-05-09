@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sortedcontainers import SortedSet
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 
 from extractor.data_extractor import step_1_conflict_detection_extract
 

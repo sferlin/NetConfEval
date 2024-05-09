@@ -8,7 +8,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from sortedcontainers import SortedSet
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 
 from extractor.data_extractor import step_1_conflict_distance_extract
 from netconfeval.common.model_configs import model_configurations
