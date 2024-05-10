@@ -74,7 +74,7 @@ python3 generate_step_2_dataset.py
 
 The result will be saved in `datasets/step_2_code_gen.jsonl` by default. You can change the folder by specifying the `--results_path` argument.
 
-The dataset contains both the input user prompt (without preliminary system prompts) in the `input` column and a series of test cases to run on the generated code in the `tests` column.
+The dataset contains both the input user prompt (without preliminary system prompts) in the `prompt` column and a series of test cases to run on the generated code in the `tests` column.
 
 To run the tests, you need to JSON decode the `tests` field. This will give you a dict with an incremental index as key and the test body as value.
 It is recommended to run the tests in order, following the index key. You need the `pytest` package to run the tests. 
@@ -88,10 +88,10 @@ The above procedure is implemented in NetConfEval through the `netconfeval/verif
 
 #### Dataset Format
 Each line of the output `.jsonl` file contains the following fields:
-- `prompts`: the type of instruction given to the model to generate the code, can be `basic` or `no_detail`
+- `prompt`: the type of instruction given to the model to generate the code, can be `basic` or `no_detail`
 - `policy`: the type of policy that the generated function should implement, can be `shortest_path`, `reachability`, `waypoint` or `loadbalancing`
 - `prompt`: the human textual instructions fed to the model to generate code
-- `tests`: test cases (to run using `pytest`) to verify code correctness
+- `tests`: JSON-encoded test cases (to run using `pytest`) to verify code correctness
 
 ### Generating Low-level Configurations
 This script will generate the dataset that can be used to evaluate `step_3_low_level.py`.
@@ -106,7 +106,7 @@ The result will be saved in `datasets/step_3_low_level.jsonl` by default. You ca
 
 The generation will run a Docker container (through Kathará) with FRRouting, and will convert the configurations in a deterministic output using the `vtysh` command line.
 
-The dataset contains both the input user prompt (without preliminary system prompts) in the `input` column and the corresponding configuration for each device in the `result` column.
+The dataset contains both the input user prompt (without preliminary system prompts) in the `prompt` column and the corresponding configuration for each device in the `result` column.
 
 To compare the generated LLM configuration with the expected one, we suggest to:
 - JSON decode the `result` column, this will give you a Dict with the device name as key and the expected configuration as value (in string);

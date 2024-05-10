@@ -88,7 +88,7 @@ python3 step_2_code_gen.py --model gpt-4-1106 --n_runs 1 --policy_types shortest
 The experiment results will be stored in the directory named `results_code_gen` by default.
 
 #### Generating Low-level Configurations
-This section explores the problem of transforming high-level requirements into detailed, low-level configurations suitable for installation on network devices. We handpicked four network scenarios publicly available in the [Kathará Network Emulator repository](https://github.com/KatharaFramework/Kathara-Labs). The selection encompasses the most widespread protocols and consists of two OSPF networks (one single-area network and one multi-area network), a RIP network, a BGP network featuring a basic peering between two routers, and a small fat-tree datacenter network running a made-up version of RIFT. All these scenarios leverage FRRouting as the routing suite. 
+This experiment explores the problem of transforming high-level requirements into detailed, low-level configurations suitable for installation on network devices. We handpicked four network scenarios publicly available in the [Kathará Network Emulator repository](https://github.com/KatharaFramework/Kathara-Labs). The selection encompasses the most widespread protocols and consists of two OSPF networks (one single-area network and one multi-area network), a RIP network, a BGP network featuring a basic peering between two routers, and a small fat-tree datacenter network running a made-up version of RIFT. All these scenarios (aside from RIFT) leverage FRRouting as the routing suite. 
 
 After installing [Docker](https://docs.docker.com/engine/install/), you can run:
 
