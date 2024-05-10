@@ -24,7 +24,9 @@ pip install -r requirements-hf.txt
 huggingface-cli login
 ```
 
-4. Run the `1_run_all.sh` script, specifying the number of runs, for example:
+4. To run the **Generating Low-level Configurations** experiment, you need to install [Docker](https://docs.docker.com/engine/install/) on your system.
+
+5. Run the `1_run_all.sh` script, specifying the number of runs, for example:
 ```bash
 ./1_run_all.sh -r 1
 ```

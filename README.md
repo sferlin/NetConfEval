@@ -26,9 +26,28 @@ pip install -r requirements-hf.txt
 huggingface-cli login
 ```
 
+To run the **Generating Low-level Configurations** experiment, you need to install [Docker](https://docs.docker.com/engine/install/) on your system.
+
 ## Usage
 
-### Translating High-Level Requirements to a Formal Specification Format
+### Quick Start
+
+To run the benchmark on a specific model, simply run:
+```bash
+./run_benchmark.sh -r <n_runs> -m <model_id> -f <0/1>
+```
+
+The `<n_runs>` specifies the number of iterations for each experiment. We suggest a value of `5`.
+
+The `<model_id>` is the model identifier used in the `netconfeval/common/model_configs.py` file.
+Check [Support for New Models](#support-for-new-models) for instructions on how to include a new model.
+
+The `-f` flag specifies if the model supports native parallel function calling (e.g., GPT-4-Turbo) and it should be used in the benchmark (value to `1`).
+Otherwise, the benchmark relies on ad-hoc function calling (value to `0`).
+
+### Experiments Details
+
+#### Translating High-Level Requirements to a Formal Specification Format
 This test evaluates LLMs' ability to translate network operators' requirements into a formal specification. For instance, the input information can be converted into a simple data structure to specify the reachability, waypoints, and load-balancing policies in a network.
 
 Here is an example of the experiment. We use `gpt-4-1106` to translate multiple requirements into a formal specification made of the three policies, with a batch size of 3:
@@ -38,7 +57,7 @@ python3 step_1_formal_spec_translation.py --n_run 1 --model gpt-4-1106 --policy_
 
 The experiment results will be stored in the directory named `results_spec_translation` by default.
 
-### Translating High-Level Requirements to Functions/API Calls
+#### Translating High-Level Requirements to Functions/API Calls
 This test evaluates the ability of LLMs' to translate natural language requirements into corresponding function/API calls, which is a common task in network configuration since many networks employ SDN, where a software controller can manage the underlying network via direct API calls.
 
 To translate a few requirements into multiple function calls (```add_reachability(), add_waypoint(), add_load_balance()```) in parallel, run:
@@ -47,7 +66,7 @@ To translate a few requirements into multiple function calls (```add_reachabilit
 python3 step_1_function_call.py --n_runs 1 --model gpt-4-1106 --policy_types reachability waypoint loadbalancing --batch_size 3
 ```
 
-**Ad-hoc function calling.** Since most models don't support *parallel function calling* natively, we customize the input prompt to evaluate ad-hoc function calling.
+**Ad-hoc function calling.** Since most models do not support *parallel function calling* natively, we customize the input prompt to evaluate ad-hoc function calling.
 
 To run the experiment:
 
@@ -57,7 +76,7 @@ python3 step_1_function_call.py --n_runs 1 --model gpt-4 --policy_types reachabi
 
 The experiment results will be stored in the directory named `results_function_call` by default.
 
-### Developing Routing Algorithms
+#### Developing Routing Algorithms
 Traffic engineering is a critical yet complex problem in network management, particularly in large networks. Our experiment asks the models to create functions that compute routing paths based on specific network requirements (the shortest path, reachability, waypoint, load balancing). 
 
 To run the experiment:
@@ -68,10 +87,10 @@ python3 step_2_code_gen.py --model gpt-4-1106 --n_runs 1 --policy_types shortest
 
 The experiment results will be stored in the directory named `results_code_gen` by default.
 
-### Generating Low-level Configurations
+#### Generating Low-level Configurations
 This section explores the problem of transforming high-level requirements into detailed, low-level configurations suitable for installation on network devices. We handpicked four network scenarios publicly available in the [Kathará Network Emulator repository](https://github.com/KatharaFramework/Kathara-Labs). The selection encompasses the most widespread protocols and consists of two OSPF networks (one single-area network and one multi-area network), a RIP network, a BGP network featuring a basic peering between two routers, and a small fat-tree datacenter network running a made-up version of RIFT. All these scenarios leverage FRRouting as the routing suite. 
 
-To run the experiment, you need to install [Docker](https://docs.docker.com/engine/install/) on your system. After that you can run:
+After installing [Docker](https://docs.docker.com/engine/install/), you can run:
 
 ```bash
 python3 step_3_low_level.py --n_runs 1 --model gpt-4-turbo --mode rag --rag_chunk_size 9000
@@ -87,7 +106,7 @@ We currently support OpenAI models (`'type': 'openai'`) and HuggingFace models (
 To add a model, just add a new Dict element to the `model_configurations` Dict, by providing a unique key for it.
 The new model key is then automatically visible using the `--model` command line parameter of the `.py` tests of the benchmarks.
 
-#### OpenAI Models
+### OpenAI Models
 The OpenAI model Dict element contains the following keys:
 ```python
 {
@@ -112,7 +131,7 @@ model_configurations = {
 }
 ```
 
-#### HuggingFace Models
+### HuggingFace Models
 The HuggingFace model Dict contains the following keys:
 ```python
 {
@@ -153,7 +172,7 @@ If you use NetConfEval, please cite our paper:
     author = {Wang, Chanjie and Scazzariello, Mariano and Farshin, Alireza and Ferlin, Simone and Kosti\'{c}, Dejan and Chiesa, Marco},
     title = {NetConfEval: Can LLMs Facilitate Network Configuration?},
     year = {2024},
-    issue_date = {December 2024},
+    issue_date = {June 2024},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
     volume = {2},
@@ -162,7 +181,7 @@ If you use NetConfEval, please cite our paper:
     doi = {10.1145/3656296},
     journal = {Proc. ACM Netw.},
     month = {june},
-    articleno = {},
+    articleno = {7},
     numpages = {25},
 }
 ```
