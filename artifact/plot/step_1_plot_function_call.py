@@ -104,7 +104,7 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
         requirements_str = "_".join(SortedSet(requirements))
 
         requirements2result[requirements_str] = step_1_function_call_extract(
-            results_path, requirements, function_call_type, [model_name], "cost"
+            results_path, requirements, function_call_type, model_name, "cost"
         )
     plot_costs = False
 
@@ -122,7 +122,6 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
                     statistics.mean([x for x in cost if x > 0]) if len(cost) > 0 else 0
                 )
             it_cost = [x for x in it_cost if x > 0]
-
             to_plot["x"].append(n_req * int(res["n_policy_types"]))
             to_plot["y"].append(statistics.mean(it_cost) if len(it_cost) > 0 else 0)
             to_plot["min_y"].append(min(it_cost) if len(it_cost) > 0 else 0)

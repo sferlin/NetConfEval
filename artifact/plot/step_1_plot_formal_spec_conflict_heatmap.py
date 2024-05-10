@@ -19,7 +19,7 @@ def _plot(results_path: str, figures_path: str, requirements: SortedSet, model: 
 
     results = step_1_conflict_distance_extract(results_path, requirements, model)
     corr = np.corrcoef(results)
-    mask = np.triu(np.ones_like(corr, dtype=bool))
+    mask = np.tril(np.full_like(corr, 0))
 
     ax = sns.heatmap(
         data=results, cmap="Blues", mask=mask,

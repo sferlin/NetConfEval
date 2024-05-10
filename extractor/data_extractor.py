@@ -67,8 +67,9 @@ def step_1_conflict_distance_extract(results_path: str, requirements: set | Sort
         os.path.join(results_path, f"result-{model_name}-{requirements_str}-conflict_distance-*.csv")
     )
 
-    data = [[0] * 34] * 34
-
+    data = [[0] * 34 for i in range(34)]
+    for i in data:
+        print(i)
     if len(results_files_list) == 0:
         return data
 
@@ -119,7 +120,7 @@ def step_3_low_level_extract(results_path: str, model_name: str, mode: str, rag_
         raise Exception("You must specify `rag_size` only when mode is `rag`!")
 
     results_files_list = glob.glob(
-        os.path.join(results_path, f"result-{model_name}-{mode}{rag_lbl}-*.csv")
+        os.path.join(results_path, f"result-{model_name}-{mode}{rag_lbl}*.csv")
     )
     if len(results_files_list) == 0:
         return {}
@@ -142,7 +143,6 @@ def step_3_low_level_extract(results_path: str, model_name: str, mode: str, rag_
 
 def _step_1_translation_extract_by_metric(file_path: str, metric: str) -> dict:
     data = {}
-
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
         for res in reader:
@@ -166,7 +166,6 @@ def _step_1_translation_extract_by_metric(file_path: str, metric: str) -> dict:
                 cost = float(res["total_cost"]) / (int(n_req) * int(res["n_policy_types"]))
                 if cost == 0:
                     continue
-
                 data[n_req]["data"][it].append(cost)
 
     return data

@@ -151,6 +151,7 @@ def main(args: argparse.Namespace) -> None:
     model_type = model_configurations[args.model]['type']
     if args.adhoc:
         llm_step_1 = get_model_instance(args.model)
+        llm_step_1.model_kwargs = {}
     elif model_type == 'HF':
         raise Exception(f"Native function calling not supported on type `{model_type}`!")
 
