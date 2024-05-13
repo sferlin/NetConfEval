@@ -68,8 +68,6 @@ def step_1_conflict_distance_extract(results_path: str, requirements: set | Sort
     )
 
     data = [[0] * 34 for i in range(34)]
-    for i in data:
-        print(i)
     if len(results_files_list) == 0:
         return data
 
