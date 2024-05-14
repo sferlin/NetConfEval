@@ -17,8 +17,8 @@ from netconfeval.common.model_configs import model_configurations
 def _plot(results_path: str, figures_path: str, requirements: SortedSet, model: str) -> None:
     requirements_str = "_".join(requirements)
 
+    corr = np.corrcoef([[0] * 34 for _ in range(34)])
     results = step_1_conflict_distance_extract(results_path, requirements, model)
-    corr = np.corrcoef(results)
     mask = np.tril(np.full_like(corr, 0))
 
     ax = sns.heatmap(

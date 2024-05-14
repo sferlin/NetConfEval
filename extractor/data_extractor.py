@@ -67,7 +67,7 @@ def step_1_conflict_distance_extract(results_path: str, requirements: set | Sort
         os.path.join(results_path, f"result-{model_name}-{requirements_str}-conflict_distance-*.csv")
     )
 
-    data = [[0] * 34 for i in range(34)]
+    data = [[0] * 34 for _ in range(34)]
     if len(results_files_list) == 0:
         return data
 

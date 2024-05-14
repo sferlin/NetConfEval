@@ -60,6 +60,7 @@ def _plot(results_path: str, figures_path: str, requirements: SortedSet, models:
     # Accuracy
     for model_name in model2plot.keys():
         res_accuracy[model_name] = step_1_translation_extract(results_path, requirements, model_name, "accuracy")
+    plot_accuracy = False
 
     ax = plt.gca()
     x_ticks = None
@@ -77,42 +78,45 @@ def _plot(results_path: str, figures_path: str, requirements: SortedSet, models:
             to_plot["min_y"].append(min(it_acc))
             to_plot["max_y"].append(max(it_acc))
 
-        model_params = model2plot[model]
-        plt.plot(
-            to_plot["x"], to_plot["y"],
-            marker=model_params["marker"],
-            fillstyle='none',
-            linestyle='--',
-            color=model_params["color"],
-            label=model_params["label"]
-        )
-
-        for idx, x in enumerate(to_plot['x']):
-            plt.errorbar(
-                x,
-                to_plot['y'][idx],
-                yerr=[[to_plot['y'][idx] - to_plot['min_y'][idx]],
-                      [to_plot['max_y'][idx] - to_plot['y'][idx]]],
+        if len(to_plot["x"]) > 0:
+            plot_accuracy = True
+            model_params = model2plot[model]
+            plt.plot(
+                to_plot["x"], to_plot["y"],
+                marker=model_params["marker"],
+                fillstyle='none',
+                linestyle='--',
                 color=model_params["color"],
-                elinewidth=1, capsize=1
+                label=model_params["label"]
             )
 
-        if x_ticks is None:
-            x_ticks = to_plot["x"]
+            for idx, x in enumerate(to_plot['x']):
+                plt.errorbar(
+                    x,
+                    to_plot['y'][idx],
+                    yerr=[[to_plot['y'][idx] - to_plot['min_y'][idx]],
+                          [to_plot['max_y'][idx] - to_plot['y'][idx]]],
+                    color=model_params["color"],
+                    elinewidth=1, capsize=1
+                )
 
-    plt.ylim([-0.1, 1.2])
-    plt.yticks(np.arange(0, 1.2, 0.25))
-    plt.xscale('log', base=10)
-    plt.xticks(x_ticks)
-    ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    plt.legend(loc="lower left", labelspacing=0.1, ncol=1, prop={'size': 9})
-    plt.xlabel('Batch Size')
-    plt.ylabel('Accuracy')
-    plt.grid(True)
-    plt.savefig(
-        os.path.join(figures_path, f"step_1_formal_spec_accuracy-{models}-{requirements_str}.pdf"),
-        format="pdf", bbox_inches='tight'
-    )
+            if x_ticks is None:
+                x_ticks = to_plot["x"]
+
+    if plot_accuracy:
+        plt.ylim([-0.1, 1.2])
+        plt.yticks(np.arange(0, 1.2, 0.25))
+        plt.xscale('log', base=10)
+        plt.xticks(x_ticks)
+        ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        plt.legend(loc="lower left", labelspacing=0.1, ncol=1, prop={'size': 9})
+        plt.xlabel('Batch Size')
+        plt.ylabel('Accuracy')
+        plt.grid(True)
+        plt.savefig(
+            os.path.join(figures_path, f"step_1_formal_spec_accuracy-{models}-{requirements_str}.pdf"),
+            format="pdf", bbox_inches='tight'
+        )
 
     # Cost
     res_cost = {}

@@ -32,7 +32,7 @@ requirements2plot = {
 }
 
 
-def _plot(results_path: str, figures_path: str, model_name: str, function_call_type: str) -> None:
+def _plot(results_path: str, figures_path: str, model_name: str) -> None:
     requirements2result = {}
 
     reqs = [{"reachability"}, {"reachability", "waypoint"}, {"reachability", "waypoint", "loadbalancing"}]
@@ -42,7 +42,7 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
         requirements_str = "_".join(SortedSet(requirements))
 
         requirements2result[requirements_str] = step_1_function_call_extract(
-            results_path, requirements, function_call_type, model_name, "accuracy"
+            results_path, requirements, "native", model_name, "accuracy"
         )
 
     ax = plt.gca()
@@ -95,7 +95,7 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
     plt.ylabel('Accuracy')
     plt.grid(True)
     plt.savefig(
-        os.path.join(figures_path, f"step_1_fn_accuracy-{model_name}-function-call-{function_call_type}.pdf"),
+        os.path.join(figures_path, f"step_1_fn_accuracy-{model_name}-function-call-native.pdf"),
         format="pdf", bbox_inches='tight'
     )
 
@@ -104,7 +104,7 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
         requirements_str = "_".join(SortedSet(requirements))
 
         requirements2result[requirements_str] = step_1_function_call_extract(
-            results_path, requirements, function_call_type, model_name, "cost"
+            results_path, requirements, "native", model_name, "cost"
         )
     plot_costs = False
 
@@ -171,7 +171,7 @@ def _plot(results_path: str, figures_path: str, model_name: str, function_call_t
         )
         plt.grid(True)
         plt.savefig(
-            os.path.join(figures_path, f"step_1_fn_cost-{model_name}-function-call-{function_call_type}.pdf"),
+            os.path.join(figures_path, f"step_1_fn_cost-{model_name}-function-call-native.pdf"),
             format="pdf", bbox_inches='tight'
         )
 
@@ -181,7 +181,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--results_path', type=str, required=False, default="results_function_call")
     parser.add_argument('--figures_path', type=str, required=True)
     parser.add_argument('--model', type=str, required=True)
-    parser.add_argument('--type', type=str, required=True, choices=['native', 'adhoc'])
 
     return parser.parse_args()
 
@@ -195,7 +194,7 @@ def main(args: argparse.Namespace) -> None:
 
     os.makedirs(args.figures_path, exist_ok=True)
 
-    _plot(args.results_path, args.figures_path, args.model, args.type)
+    _plot(args.results_path, args.figures_path, args.model)
 
 
 if __name__ == "__main__":
